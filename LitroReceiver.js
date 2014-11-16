@@ -6,7 +6,7 @@
  */
 
 var PaformTime = 0; //時間計測
-// var litroReceiverInstance = null;
+var litroReceiverInstance = null;
 var VIEWMULTI = 4;
 var DISPLAY_WIDTH = 80;
 var DISPLAY_HEIGHT = 80;
@@ -40,7 +40,6 @@ var COLOR_VOLUMES = [
 	, {b:[60, 188, 252, 255], r:[248, 88, 152, 255]}
 	, {b:[164, 228, 252, 255], r:[248, 164, 192, 255]}
 ];
-
 
 var USER_ID = 0;
 
@@ -114,23 +113,12 @@ function LitroReceiver() {
 LitroReceiver.prototype = {
 	init : function() {
 		var self = this;
-		this.litroSound = new LitroSound();
 		litroReceiverInstance = this;
-		
-		//効果音用
-		this.sePlayer = new LitroPlayer();
-		
 		this.keyControll = new KeyControll('cont1');
-		this.player = new LitroPlayer();
-		//
+		
 
-		this.litroSound.init(CHANNELS);
-		this.player.init("system");
-		this.sePlayer.init("se");
-
-
-			
 		// this.player = litroPlayerInstance;
+		this.initSound();
 		
 		//基本キー
 		this.initKeys();
@@ -140,10 +128,11 @@ LitroReceiver.prototype = {
 			self.initSprite();
 			self.initFrameSprites();
 			
-			// self.openFrameParts(0);
-			self.openFrameParts(1);
+			self.drawFrameParts(0);
+			// self.drawFrameParts(1);
 			// self.openFrame();
 			self.initTappables();
+			self.initOpenTappables();
 			self.initFlickables();
 			requestAnimationFrame(main);
 
@@ -158,6 +147,23 @@ LitroReceiver.prototype = {
 		this.initManual();
 		this.autoLogin();
 		this.initControllDisp();
+		
+	},
+	
+	//TouchEventによる初期化パート
+	initSound: function()
+	{
+		this.litroSound = new LitroSound();
+		
+		//効果音用
+		this.sePlayer = new LitroPlayer();
+		
+		this.player = new LitroPlayer();
+		//
+
+		this.litroSound.init(CHANNELS);
+		this.player.init("system", this.litroSound);
+		this.sePlayer.init("se", this.litroSound);
 		
 	},
 	
@@ -292,6 +298,7 @@ LitroReceiver.prototype = {
 		}
 
 	},
+
 	initEventFunc: function()
 	{
 		var self = this;
@@ -487,21 +494,32 @@ LitroReceiver.prototype = {
 		this.controllDispWordPos = wordPos;
 	},
 	
-	initTappables: function()
+	initOpenTappables: function()
 	{
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
 			, scr = document.getElementById('screen')
-			, tsfunc = function(e){
-				var pos = self.getTouchPos(e);
-				self.touchStartEvent(pos.x, pos.y);
-			}
-			, tefunc = function(e){
-				var pos = self.getTouchPos(e);
-				self.touchEndEvent(pos.x, pos.y);
-			}
 		;
+		this.clearTappableItem();
+		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
+			self.litroSound.connectOff();
+			self.litroSound.connectOn();
+			self.drawFrameParts(1);
+			self.initPlayTappables();
+			self.initPlayFlickables();
+			return false;
+		}, 'play');
+	},	
+	
+	initPlayTappables: function()
+	{
+		var c = cellhto
+			, bg = scrollByName('bg1')
+			, self = this, fs = this.frameSprites
+		;
+		this.clearTappableItem();
+		
 		this.appendTappableItem(makeRect(c(6), c(7), c(2), c(2)), function(){
 			if(self.player.isPlay()){
 				self.player.stop();
@@ -510,15 +528,35 @@ LitroReceiver.prototype = {
 				self.player.play();
 				bg.drawSpriteChunk(fs.stopButton, c(6), c(7));
 			}
-			
+			return false;
 		}, 'play');
+	},
+	
+	initTappables: function()
+	{
+		var self = this
+			, tsfunc = function(e){
+				var pos = self.getTouchPos(e);
+				self.touchStartEvent(pos.x, pos.y);
+				e.preventDefault();
+				return false;
+			}
+			, tefunc = function(e){
+				var pos = self.getTouchPos(e);
+				self.touchEndEvent(pos.x, pos.y);
+				e.preventDefault();
+				return false;
+			}
+			, scr = document.getElementById('screen')
+		;
+
 		scr.addEventListener('mousedown', tsfunc, false);
 		scr.addEventListener('mouseup', tefunc, false);
 		scr.addEventListener('touchstart', tsfunc, false);
 		scr.addEventListener('touchend', tefunc, false);
 	},
 	
-	initFlickables: function()
+	initPlayFlickables: function()
 	{
 		var c = cellhto
 			, view = scrollByName('view')
@@ -526,25 +564,27 @@ LitroReceiver.prototype = {
 			, self = this
 			, fs = this.frameSprites
 			, scr = document.getElementById('screen')
-			, mvfunc =  function(e){
-				
-				// var bounds = this.getBoundingClientRect(), w = view.canvas.width, h = view.canvas.height
-					// , x = ((((e.clientX - bounds.left) / VIEWMULTI) | 0) - view.x + w) % w
-					// , y = ((((e.clientY - bounds.top) / VIEWMULTI) | 0) - view.y + h) % h
-				// ;
-				var pos = self.getTouchPos(e);
-				self.touchMoveEvent(pos.x, pos.y);
-			}
-		;
-		
-		scr.addEventListener('mousemove', mvfunc, false);
-		scr.addEventListener('touchmove', mvfunc, false);
-		
+			;
+		this.clearFlickableItem();
 		this.appendFlickableItem(makeRect(c(2), c(6), c(6), c(1)), function(item, x, y){
 			self.flickVolume(x, y);
 			self.drawVolumeSprite();
-			
 		}, 'volume');
+	},
+	initFlickables: function()
+	{
+		var self = this
+			, mvfunc =  function(e){
+				var pos = self.getTouchPos(e);
+				self.touchMoveEvent(pos.x, pos.y);
+				e.preventDefault();
+				return false;
+			}
+			, scr = document.getElementById('screen')
+			;
+		
+		scr.addEventListener('mousemove', mvfunc, false);
+		scr.addEventListener('touchmove', mvfunc, false);
 	},
 
 	
@@ -755,6 +795,9 @@ LitroReceiver.prototype = {
 	
 	playLitro: function()
 	{
+		if(this.player == null){
+			return;
+		}
 		if(!this.player.isPlay()){
 			return;
 		}
@@ -860,8 +903,11 @@ LitroReceiver.prototype = {
 		var pos = this.tapMovePos
 			, vol = this.player.volume() + ((x - pos.x) * this.VOLUME_INC)
 		;
+		this.player.log(vol);
+		
 		vol = vol < this.VOLUME_MIN ? this.VOLUME_MIN : vol;
 		vol = vol > this.VOLUME_MAX ? this.VOLUME_MAX : vol;
+
 		this.player.volume(vol);
 	},
 	
@@ -880,7 +926,9 @@ LitroReceiver.prototype = {
 		for(i = 0; i < this.tappableItems.length; i++){
 			item = this.tappableItems[i];
 			if(item.rect.isContain(x, y) && item.rect.isContain(pos.x, pos.y)){
-				item.func(item);
+				if(item.func(item) == false){
+					break;
+				};
 			}
 		}
 		this.tapStartPos.x = -1;
@@ -895,12 +943,15 @@ LitroReceiver.prototype = {
 		for(i = 0; i < this.flickableItems.length; i++){
 			item = this.flickableItems[i];
 			if(item.rect.isContain(x, y) && item.rect.isContain(tpos.x, tpos.y)){
-				item.func(item, x, y);
+				if(item.func(item) == false){
+					break;
+				};
 			}
 		}
 		
 		this.tapMovePos.x = x;
 		this.tapMovePos.y = y;
+		
 	},
 	
 	
@@ -916,7 +967,7 @@ LitroReceiver.prototype = {
 		
 	},
 	
-	openFrameParts: function(num)
+	drawFrameParts: function(num)
 	{
 		var f = this.frameSprites
 			, spr = this.sprites
@@ -928,11 +979,11 @@ LitroReceiver.prototype = {
 		scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT / 2));
 		switch(num){
 			case 0: 
-			// drawc(f.closeFrame, cto(1), cto(6));
-			// drawc(f.closeShine, cto(1), cto(6));
-			// drawc(f.zenmai1, cto(8), cto(8));
-			// drawc(f.power_off, cto(4), cto(7));
-			// draws(spr.pwLamp3, cto(2), cto(8));
+			drawc(f.closeFrame, cto(1), cto(6));
+			drawc(f.closeShine, cto(1), cto(6));
+			drawc(f.zenmai1, cto(8), cto(8));
+			drawc(f.power_off, cto(4), cto(7));
+			draws(spr.pwLamp3, cto(2), cto(8));
 			break;
 			case 1:
 			drawc(f.openFrame, cto(1), cto(1));
@@ -967,7 +1018,7 @@ LitroReceiver.prototype = {
 		var spr
 			, bg = scrollByName('bg1')
 			, bright, phase, rot, cycle
-			, vol = this.player.volume()
+			, vol = this.player != null ? this.player.volume() : 0
 			, len = this.volumeSprites.length
 			, xk = cellhto(6), xv = cellhto(7), y = cellhto(3)
 			, cl = COLOR_VOLUMES
@@ -1003,8 +1054,9 @@ LitroReceiver.prototype = {
 		var spr
 			, bg = scrollByName('sprite')
 			, bright, phase
-			, enables = this.litroSound.enableChannels()
+			, enables = this.litroSound != null ? this.litroSound.enableChannels() : null
 		;
+		if(enables == null){return;}
 		for(i = 0; i < this.channelSprites.length; i++){
 			if(!enables[i]){continue;}
 			// console.log(this.litroSound.channel[i].envelopeClock);
@@ -1354,9 +1406,15 @@ function litroReceiverMain()
 };
 
 function main() {
-	litroSoundMain();
-	litroReceiverMain();
-	keyStateCheck();
+	try{
+		litroSoundMain();
+		litroReceiverMain();
+		keyStateCheck();
+	}
+	catch(e){
+		console.error(e);
+		return;
+	}
 	requestAnimationFrame(main);
 };
 
@@ -1369,9 +1427,7 @@ window.addEventListener('load', function() {
 	var ltrc = new LitroReceiver()
 	;
 	window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-	
 	ltrc.init();
-	
 	// requestAnimationFrame(main);
 	removeEventListener('load', this, false);
 	
