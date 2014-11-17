@@ -903,7 +903,7 @@ LitroReceiver.prototype = {
 		var pos = this.tapMovePos
 			, vol = this.player.volume() + ((x - pos.x) * this.VOLUME_INC)
 		;
-		this.player.log(vol);
+		console.log(x);
 		
 		vol = vol < this.VOLUME_MIN ? this.VOLUME_MIN : vol;
 		vol = vol > this.VOLUME_MAX ? this.VOLUME_MAX : vol;
@@ -943,7 +943,7 @@ LitroReceiver.prototype = {
 		for(i = 0; i < this.flickableItems.length; i++){
 			item = this.flickableItems[i];
 			if(item.rect.isContain(x, y) && item.rect.isContain(tpos.x, tpos.y)){
-				if(item.func(item) == false){
+				if(item.func(item, x, y) == false){
 					break;
 				};
 			}
@@ -976,7 +976,7 @@ LitroReceiver.prototype = {
 			, drawc = function(s, x, y){scr.drawSpriteChunk(s, x, y);}
 			, draws = function(s, x, y){scr.drawSprite(s, x, y);}
 		;
-		scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT / 2));
+		scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT));
 		switch(num){
 			case 0: 
 			drawc(f.closeFrame, cto(1), cto(6));
