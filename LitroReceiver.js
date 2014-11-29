@@ -16,12 +16,14 @@ var CHIPCELL_SIZE = 8;
 var COLOR_STEP = [184, 248, 216, 255];
 var COLOR_TIME = [248, 216, 120, 255];
 
-var COLOR_NOTEFACE = [184, 248, 184, 255];
-var COLOR_NOTEPRINT = [0, 168, 0, 255];
-var COLOR_PARAMKEY = [188, 188, 188, 255];
-var COLOR_DISABLE = [120, 120, 120, 255];
-var COLOR_LINE = [88, 216, 84, 255];
-var COLOR_ARRAY = [[248, 120, 88, 255], [252, 168, 68, 255], [248, 184, 0, 255], [88, 216, 84, 255], [60, 188, 252, 255], [152, 120, 248, 255], [248, 120, 248, 255], [248, 88, 152, 255], ];
+// var COLOR_NOTEFACE = [184, 248, 184, 255];
+// var COLOR_NOTEPRINT = [0, 168, 0, 255];
+// var COLOR_PARAMKEY = [188, 188, 188, 255];
+// var COLOR_DISABLE = [120, 120, 120, 255];
+// var COLOR_LINE = [88, 216, 84, 255];
+// var COLOR_ARRAY = [[248, 120, 88, 255], [252, 168, 68, 255], [248, 184, 0, 255], [88, 216, 84, 255], [60, 188, 252, 255], [152, 120, 248, 255], [248, 120, 248, 255], [248, 88, 152, 255], ];
+
+var COLOR_DISP_B = [184, 248, 184, 255];
 
 var COLOR_CHBRIGHT = [
 	{a: [248, 120, 88, 255], d: [240, 208, 176, 255], s: [248, 56, 0, 255], r: [168, 16, 0, 255]}
@@ -59,6 +61,11 @@ function LitroReceiver() {
 	
 	this.tapStartPos = {x: 0, y :0};
 	this.tapMovePos = {x: 0, y: 0};
+	
+	this.titleSlideString = '';
+	this.titleSlideSpace = '　　　　　　　';
+	this.titleSlideRate = 0.05;
+	this.titleSlideCount = 0;
 
 	this.debugCell = false;
 	this.debugCellPos = {x: 0, y :0};
@@ -100,6 +107,7 @@ function LitroReceiver() {
 	this.manualScrollParams = {dir: null, count: 0, dulation: 24, bg1: {x: 0, y: 0}, bg2: {x: 0, y: 0}, changeMode: null, openTime:Date.now()};
 	
 	this.tappableItems = [];
+	this.tapStartItems = [];
 	this.flickableItems = [];
 
 	this.viewMode =null;
@@ -138,8 +146,8 @@ LitroReceiver.prototype = {
 
 		});
 		// this.initFingerState(this.fingers);
-		this.initWords();
 		this.initCanvas();
+		this.initWords();
 		this.initViewMode();
 		// this.setBg2Position(this.noteScrollPos.x);
 		this.initCatchEvent();
@@ -198,8 +206,6 @@ LitroReceiver.prototype = {
 					self.debugCellPos.y = (pos.y / cellhto(1)) | 0;
 					// e.preventDefault();
 					// e.stopPropagation();
-					// self.debugCellPos.x = (((e.clientX - bounds.left) / VIEWMULTI) / cellhto(1)) | 0;
-					// self.debugCellPos.y = (((e.clientY - bounds.top) / VIEWMULTI) / cellhto(1)) | 0;
 				}
 			;
 			
@@ -228,11 +234,13 @@ LitroReceiver.prototype = {
 			this.editMode = 'play';
 			this.player.loadFromServer(this.loginParams.user_id, sound_id[1], 
 			function(data){
+				var player = self.player, s = self.titleSlideSpace;
 					if(data == null || data === false){
 						self.setError(data != null ? data : {error_code: 0, message: 'error'});
 						return;
 					}
-					self.player.setPlayData(data);
+					player.setPlayData(data);
+					self.titleSlideString = s + player.title + s + player.fileUserName + s;
 					return;
 				},
 				function(data){
@@ -314,16 +322,23 @@ LitroReceiver.prototype = {
 	
 	initWords: function()
 	{
-		var word;//, WordPrint = wordPrint;
+		var word
+			, scr = scrollByName('bg1')
+		;//, WordPrint = wordPrint;
 		word = new WordPrint();
 		word.init();
 		word.setFontSize('8px');
 		word.rowSpace = 0;
+		word.setLineCols(6);
+		word.setMaxRows(1);
+		word.setScroll(scr);
 		this.word8 = word;
 		word = new WordPrint();
 		word.init();
 		word.setFontSize('4v6px');
 		word.rowSpace = 0;
+		word.setLineCols(6);
+		word.setMaxRows(1);
 		word.setMarkAlign('vertical');
 		this.word4 = word;
 	},
@@ -440,6 +455,7 @@ LitroReceiver.prototype = {
 			mainButtons: msq('2+6:13+2'),
 			playButton: msq('6+2:13+2'),
 			stopButton: msq('8+2:13+2'),
+			returnButton: msq('4+2:13+2'),
 			
 			
 			// power_close_top: msc([9, 8, 1, 1]),
@@ -506,7 +522,10 @@ LitroReceiver.prototype = {
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
 			self.drawFrameParts(1);
+
+			self.clearTappableItem();
 			self.initPlayTappables();
+			self.initTapReturn();
 			self.initPlayFlickables();
 			return false;
 		}, 'play');
@@ -517,20 +536,59 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
+			, rect = makeRect(c(6), c(7), c(2), c(2))
+			, pos = {x: c(6), y: c(7)}
+			, cw = COLOR_DISP_B , cb = COLOR_BLACK
 		;
-		this.clearTappableItem();
-		
-		this.appendTappableItem(makeRect(c(6), c(7), c(2), c(2)), function(){
+		this.appendTappableItem(rect, function(){
 			if(self.player.isPlay()){
 				self.player.stop();
-				bg.drawSpriteChunk(fs.playButton, c(6), c(7));
+				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}else{
 				self.player.play();
-				bg.drawSpriteChunk(fs.stopButton, c(6), c(7));
+				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
+			}
+			return false;
+		}, 'play');
+		this.appendTapStartItem(rect, function(){
+			if(self.player.isPlay()){
+				fs.playButton = setSwapColorSprite(fs.playButton, cw, cb, true);
+				fs.playButton = setSwapColorSprite(fs.playButton, cb, cw);
+				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
+				fs.playButton = setSwapColorSprite(fs.playButton);
+			}else{
+				fs.stopButton = setSwapColorSprite(fs.stopButton, cb, cw, true);
+				fs.stopButton = setSwapColorSprite(fs.stopButton, cw, cb);
+				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
+				fs.stopButton = setSwapColorSprite(fs.stopButton);
 			}
 			return false;
 		}, 'play');
 	},
+	
+	initTapReturn: function()
+	{
+		var c = cellhto
+			, bg = scrollByName('bg1')
+			, self = this, fs = this.frameSprites
+			, scr = document.getElementById('screen')
+			, rect = makeRect(c(4), c(7), c(2), c(2))
+			, pos = {x: c(4), y: c(7)}
+			, cw = COLOR_DISP_B , cb = COLOR_BLACK
+		;
+		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
+			self.player.seekMoveBack(-1);
+			setSwapColorSprite(fs.returnButton);
+			bg.drawSpriteChunk(fs.returnButton, pos.x, pos.y);
+			return false;
+		}, 'play');
+		this.appendTapStartItem(rect, function(){
+			setSwapColorSprite(fs.returnButton, cw, cb, true);
+			setSwapColorSprite(fs.returnButton, cb, cw);
+			bg.drawSpriteChunk(fs.returnButton, pos.x, pos.y);
+			setSwapColorSprite(fs.returnButton);
+			return false;
+		}, 'play');	},
 	
 	initTappables: function()
 	{
@@ -804,6 +862,34 @@ LitroReceiver.prototype = {
 		// this.updateForwardSeek();
 	},
 	
+	clearEventItem: function(items, name)
+	{
+		var rep = [], i;
+		if(name == null){
+			return [];
+		}
+		for(i = 0; i < items.length; i++){
+			if(items[i].name){
+				continue;
+			}
+			rep.push(items[i]);
+		}
+		items = [];
+		items = rep;
+		return items;
+	},
+	
+	appendTapStartItem: function(rect, func, name)
+	{
+		this.tapStartItems.push({rect: rect, func: func, name: (name == null ? this.tappableItems.lengh : name)});
+		return this.tapStartItems.length;
+	},
+	
+	clearTapStartItem: function(name){
+		this.tapStartItems = this.clearEventItem(this.tapStartItems, name);
+		return this.tapStartItems.length;
+	},	
+	
 	appendTappableItem: function(rect, func, name)
 	{
 		this.tappableItems.push({rect: rect, func: func, name: (name == null ? this.tappableItems.lengh : name)});
@@ -811,19 +897,7 @@ LitroReceiver.prototype = {
 	},
 	
 	clearTappableItem: function(name){
-		var rep = [], i;
-		if(name == null){
-			this.tappableItems = [];
-			return;
-		}
-		for(i = 0; i < this.tappableItems.length; i++){
-			if(this.tappableItems[i].name){
-				continue;
-			}
-			rep.push(this.tappableItems[i]);
-		}
-		this.tappableItems = [];
-		this.tappableItems = rep;
+		this.tappableItems = this.clearEventItem(this.tappableItems, name);
 		return this.tappableItems.length;
 	},
 	
@@ -834,19 +908,7 @@ LitroReceiver.prototype = {
 	},	
 	
 	clearFlickableItem: function(name){
-		var rep = [], i;
-		if(name == null){
-			this.flickableItems = [];
-			return;
-		}
-		for(i = 0; i < this.flickableItems.length; i++){
-			if(this.flickableItems[i].name){
-				continue;
-			}
-			rep.push(this.flickableItems[i]);
-		}
-		this.flickableItems = [];
-		this.flickableItems = rep;
+		this.flickableItems = this.clearEventItem(this.flickableItems, name);
 		return this.flickableItems.length;
 	},	
 	
@@ -903,7 +965,7 @@ LitroReceiver.prototype = {
 		var pos = this.tapMovePos
 			, vol = this.player.volume() + ((x - pos.x) * this.VOLUME_INC)
 		;
-		console.log(x);
+		// console.log(x);
 		
 		vol = vol < this.VOLUME_MIN ? this.VOLUME_MIN : vol;
 		vol = vol > this.VOLUME_MAX ? this.VOLUME_MAX : vol;
@@ -913,10 +975,20 @@ LitroReceiver.prototype = {
 	
 	touchStartEvent: function(x, y)
 	{
+		var i, item, pos;
 		this.tapStartPos.x = x;
 		this.tapStartPos.y = y;
 		this.tapMovePos.x = x;
 		this.tapMovePos.y = y;
+		pos = this.tapStartPos;
+		for(i = 0; i < this.tapStartItems.length; i++){
+			item = this.tapStartItems[i];
+			if(item.rect.isContain(x, y) && item.rect.isContain(pos.x, pos.y)){
+				if(item.func(item) == false){
+					break;
+				};
+			}
+		}
 		
 	},
 	
@@ -999,9 +1071,6 @@ LitroReceiver.prototype = {
 			
 			
 		}
-		this.word8.setMaxRows(0);
-		this.word8.setLineCols(4);
-		this.word8.setScroll(scr);
 	},
 
 	setChannelSprite: function(ch, key)
@@ -1011,6 +1080,25 @@ LitroReceiver.prototype = {
 		;
 		// spr.timer = env.attack + env.decay + env.length + env.release;
 		spr.timer = env.attack + env.decay + env.length;
+	},
+	
+	drawTitle: function()
+	{
+		var bg = scrollByName('bg1')
+			, sub = this.titleSlideString
+			, slen = 6
+			, rightSublen = 0
+			, leftSublen = 0
+			, titlePos = ((this.titleSlideCount * this.titleSlideRate) % (sub.length - slen)) | 0
+			, x = cellhto(2), y = cellhto(4)
+		;
+		if(!this.player.isPlay()){
+			return;
+		}
+		
+		this.word8.print(sub.substr(titlePos, slen), x, y, COLOR_BLACK, COLOR_WHITE);
+		
+		++this.titleSlideCount;
 	},
 	
 	drawVolumeSprite: function()
@@ -1153,7 +1241,7 @@ LitroReceiver.prototype = {
 		// console.log(params.pos.x);
 	},
 	
-	repeatDrawMenu : function()
+	repeatDraw: function()
 	{
 		//channel note file play
 		switch(this.playMode){
@@ -1161,6 +1249,7 @@ LitroReceiver.prototype = {
 		}
 		this.drawDebugCell();
 		this.drawChannelSprites();
+		this.drawTitle();
 		// console.time('rep');
 		// console.timeEnd('rep');
 
@@ -1369,7 +1458,7 @@ function drawLitroScreen()
 	}
 	// ltrc.drawNoteTest();
 	// bg1.ctx.putImageData(imageResource.ctx.ui_8p.getImageData(0, 0, 128, 128), 0, 0);
-	ltrc.repeatDrawMenu();
+	ltrc.repeatDraw();
 	// bg2.drawSpriteChunk(makeSpriteQuery(ltrc.uiImageName, 'a'), 0,0 );
 	// if(ltrc.editMode != 'manual'){
 		// bg2.rasterto(view, 0, 0, null, DISPLAY_HEIGHT / 2, ltrc.bg2x.t + cellhto(ltrc.noteScrollCmargin.x), 0);
