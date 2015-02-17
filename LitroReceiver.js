@@ -1459,8 +1459,8 @@ function drawLitroScreen()
 	}
 	// ltrc.drawNoteTest();
 	// bg1.ctx.putImageData(imageResource.ctx.ui_8p.getImageData(0, 0, 128, 128), 0, 0);
-	drawCanvasStacks(spmax);
 	ltrc.repeatDraw();
+	drawCanvasStacks(spmax);
 	// bg2.drawSpriteChunk(makeSpriteQuery(ltrc.uiImageName, 'a'), 0,0 );
 	// if(ltrc.editMode != 'manual'){
 		// bg2.rasterto(view, 0, 0, null, DISPLAY_HEIGHT / 2, ltrc.bg2x.t + cellhto(ltrc.noteScrollCmargin.x), 0);
