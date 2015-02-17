@@ -1448,6 +1448,7 @@ function drawLitroScreen()
 	, bg2 = scrollByName('bg2')
 	, view = scrollByName('view')
 	, scr = scrollByName('screen')
+	, spmax = ltrc.debugCell == null ? null : 3200
 	;
 	// printDebug(ltrc.litroSound.channel[0].isRefreshClock(), 1);
 	if(ltrc.hiddenScreen){
@@ -1458,6 +1459,7 @@ function drawLitroScreen()
 	}
 	// ltrc.drawNoteTest();
 	// bg1.ctx.putImageData(imageResource.ctx.ui_8p.getImageData(0, 0, 128, 128), 0, 0);
+	drawCanvasStacks(spmax);
 	ltrc.repeatDraw();
 	// bg2.drawSpriteChunk(makeSpriteQuery(ltrc.uiImageName, 'a'), 0,0 );
 	// if(ltrc.editMode != 'manual'){
