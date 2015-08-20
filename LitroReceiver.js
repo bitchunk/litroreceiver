@@ -51,6 +51,8 @@ function LitroReceiver() {
 	this.frameSprites = {}; //背景フレーム用spriteChunk
 	this.frameChunksKeys = {}; //framechunksのkeyインデックス重複はArray
 	
+	this.isOpen = false;
+	
 	this.sprites = {};
 	this.channelSprites = [];
 	this.volumeSprites = [];
@@ -63,17 +65,22 @@ function LitroReceiver() {
 	this.tapMovePos = {x: 0, y: 0};
 	
 	this.titleSlideString = '';
-	this.titleSlideSpace = '　　　　　　　';
+	this.titleSlideSpace = '　　　　　　';
 	this.titleSlideRate = 0.05;
 	this.titleSlideCount = 0;
+	this.titleCmargin = {x: 2, y: 4};
+	this.titleCellWidth = 6;
+	this.titleCellHeight = 1;
 
 	this.debugCell = false;
 	this.debugCellPos = {x: 0, y :0};
 	
 	
-	this.VOLUME_INC = 0.01;
-	this.VOLUME_MAX = 0.80;
+	this.VOLUME_INC = VOLUME_CELLSIZE
+	this.VOLUME_MAX = this.VOLUME_INC * 80;
 	this.VOLUME_MIN = 0.0;
+	this.durativeVolume = 0; //イベントによる重複描画防止
+
 
 	this.menuDispCmargin = {x: 24, y: 17};
 	this.snsCmargin = {x:34, y:17};
@@ -169,9 +176,13 @@ LitroReceiver.prototype = {
 		this.player = new LitroPlayer();
 		//
 
-		this.litroSound.init(CHANNELS);
-		this.player.init("system", this.litroSound);
-		this.sePlayer.init("se", this.litroSound);
+		this.litroSound.init(CHANNELS_NUM);
+		// this.player.init("system", this.litroSound);
+		// this.sePlayer.init("se", this.litroSound);
+		this.player.init("system");
+		this.sePlayer.init("se");
+		
+		// this.durativeVolume = this.player.volume();
 		
 	},
 	
@@ -240,7 +251,7 @@ LitroReceiver.prototype = {
 						return;
 					}
 					player.setPlayData(data);
-					self.titleSlideString = s + player.title + s + player.fileUserName + s;
+					// self.titleSlideString = s + player.title + s + player.fileUserName + s;
 					return;
 				},
 				function(data){
@@ -310,10 +321,10 @@ LitroReceiver.prototype = {
 	initEventFunc: function()
 	{
 		var self = this;
-		this.litroSound.setSetChannelEvent(function(ch, key, value){
+		this.player.setSetChannelEvent(function(ch, key, value){
 				// self.setChannelSprite(ch, key);
 		});
-		this.litroSound.setOnNoteKeyEvent(function(ch, key){
+		this.player.setOnNoteKeyEvent(function(ch, key){
 			self.setChannelSprite(ch, key);
 		});
 		this.player.setRestartEvent(function(){
@@ -405,7 +416,7 @@ LitroReceiver.prototype = {
 		mk('volKnob1', 200);
 		mk('volKnob2', 201);
 		
-		for(i = 0; i < CHANNELS; i++){
+		for(i = 0; i < CHANNELS_NUM; i++){
 			this.channelSprites[i] = {sprite: chmk(i), timer: 0, x: cellhto((i % 4) + x), y: cellhto(((i / 4) | 0) + y), color: COLOR_CHBRIGHT[i].s};
 		}
 		
@@ -519,6 +530,7 @@ LitroReceiver.prototype = {
 		;
 		this.clearTappableItem();
 		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
+			self.isOpen = true;
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
 			self.drawFrameParts(1);
@@ -546,6 +558,9 @@ LitroReceiver.prototype = {
 				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}else{
 				self.player.play();
+				// self.setTitle(self.titleSlideString);
+				self.setTitle(self.player.title, self.player.fileUserName);
+				
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
 			}
 			return false;
@@ -626,7 +641,7 @@ LitroReceiver.prototype = {
 		this.clearFlickableItem();
 		this.appendFlickableItem(makeRect(c(2), c(6), c(6), c(1)), function(item, x, y){
 			self.flickVolume(x, y);
-			self.drawVolumeSprite();
+			//self.drawVolumeSprite(); //ここで描画してはいけない
 		}, 'volume');
 	},
 	initFlickables: function()
@@ -652,12 +667,13 @@ LitroReceiver.prototype = {
 		return {name: name, sprite: sprite, rect: repeatRect, flip: flip};
 	},
 	
+	//未使用
 	initCatchEvent: function(defaultset)
 	{
 		var i, type;
 		if(defaultset == null){
-			for(i = 0; i < AudioChannel.sortParam.length; i++){
-				type = AudioChannel.sortParam[i];
+			for(i = 0; i < LitroWaveChannel.sortParam.length; i++){
+				type = LitroWaveChannel.sortParam[i];
 				this.catchEventset[type] = {};
 			}
 		}else{
@@ -665,12 +681,15 @@ LitroReceiver.prototype = {
 		}
 		// console.log("init", this.catchEventset);
 	},
+	//未使用
 	initSelect: function()
 	{
 		this.selectNote = {time: -1, ch: -1, type:'note'};
 		this.selectNoteHistory = [];
 		this.selectNoteHistory.push({time: -1, ch: -1, type:'note'});
 	},
+	
+	//未使用
 	selectEventset: function(ch, eventset, pop)
 	{
 		if(this.selectNote.time >= 0 && !pop){
@@ -692,6 +711,7 @@ LitroReceiver.prototype = {
 
 	},
 	
+	//未使用
 	isBlackKey: function(name){
 		if(this.BLACK_KEY[name] == null){
 			return false;
@@ -700,12 +720,14 @@ LitroReceiver.prototype = {
 		}
 	},
 	
+	//未使用
 	isPackedFile: function(file){
 		return this.packedFiles.some(function(pack, i){
 				return pack.sound_id == file.sound_id;
 		});
 	},
 
+	//未使用
 	seekDispSide: function(pos){
 		var ppos = this.seekPosition()
 			, center = DISPLAY_WIDTH / 2
@@ -717,11 +739,13 @@ LitroReceiver.prototype = {
 			return 'left';
 	},
 	
+	//未使用
 	seekStep: function()
 	{
 		return (this.noteRangeScale / this.noteRangeCells) | 0;
 	},
 	
+	//未使用
 	seekCenterPosition: function()
 	{
 		return this.seekPosition(this.noteRangeScale * this.noteRange / 2);
@@ -739,20 +763,25 @@ LitroReceiver.prototype = {
 		return {x: x, y: y};
 	},
 
+	//未使用
 	getKeysDefine: function(){
 		return this.CONTROLL_CHARS;
 	},
 	
+	//未使用
 	getLastCommand: function(a)
 	{
 		a = a == null ? 0 : a;
 		return this.commandPath[this.commandPath.length - 1 - a] == null ? '' : this.commandPath[this.commandPath.length - 1 - a];
 	},
+	
+	//未使用
 	getShareMenuList: function()
 	{
 		return this.shareMenuList;
 	},
 	
+	//未使用
 	getManualMenuList: function()
 	{
 		if(this.commandPath.length == 0){
@@ -761,11 +790,13 @@ LitroReceiver.prototype = {
 		return null;
 	},
 	
+	//未使用
 	getLoginParams: function()
 	{
 		return this.loginParams.user_id == 0 ? null : this.loginParams;
 	},
 	
+	//未使用
 	setError: function(errorObj, mode, comClear)
 	{
 		var self = this;
@@ -779,6 +810,7 @@ LitroReceiver.prototype = {
 		}, 1200);
 	},
 	
+	//未使用
 	logoutSNS: function()
 	{
 		var self = this;
@@ -799,6 +831,7 @@ LitroReceiver.prototype = {
 		
 	},
 	
+	//未使用
 	autoLogin: function()
 	{
 		var self = this;
@@ -824,6 +857,7 @@ LitroReceiver.prototype = {
 		
 	},
 	
+	//未使用
 	loginSNS: function()
 	{
 		var self = this;
@@ -1026,7 +1060,7 @@ LitroReceiver.prototype = {
 		
 	},
 	
-	
+	//未使用
 	openFrame: function()
 	{
 		scrollByName('bg1').clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT / 2));
@@ -1036,7 +1070,7 @@ LitroReceiver.prototype = {
 			chunk.sprite = flipSprite(chunk.sprite, chunk.flip.h, chunk.flip.v);
 			this.drawFrameLine(chunk.sprite, rect.x, rect.y, rect.w, rect.h);
 		}, this);
-		
+	
 	},
 	
 	drawFrameParts: function(num)
@@ -1067,23 +1101,71 @@ LitroReceiver.prototype = {
 			drawc(f.mainButtons, cto(2), cto(7));
 			
 			this.drawVolumeSprite();
+			scrollByName('bg1').clear(null, makeRect(cellhto(this.titleCmargin.x), cellhto(this.titleCmargin.y), cellhto(this.titleCellWidth), cellhto(this.titleCellHeight)));
 			break;
-			
-			
 		}
+
 	},
 
 	setChannelSprite: function(ch, key)
 	{
 		var spr = this.channelSprites[ch]
-			, env = this.litroSound.getEnvelopes(ch, true)
+			, env = this.player.getEnvelopes(ch)
 		;
 		// spr.timer = env.attack + env.decay + env.length + env.release;
 		spr.timer = env.attack + env.decay + env.length;
 	},
 	
+	setTitle: function(title, user)
+	{
+		var bg = scrollByName('bg2')
+			, str = '☆ ☆ ☆ ' + title + ' ☆ ' + user
+			, x = cellhto(2), y = cellhto(4)
+			, bgCellWidth = 10, bgCellHeight = 10, i, start, end
+			, maxWords = bgCellWidth * bgCellHeight
+			, len =  str.length;
+			
+		str = str.substr(0, maxWords);
+		for(i = 0; i < maxWords - len; i++){
+			str += i % 2 == 0 ? ' ' : '☆';
+		}
+		// console.log(maxWords , str.length);
+		this.word8.setScroll(bg);
+		this.word8.setLineCols(bgCellWidth);
+		this.word8.setMaxRows(bgCellHeight);
+		this.word8.print(str, 0, 0, COLOR_BLACK, COLOR_WHITE);
+	},
+	
+	drawBgTitle: function()
+	{
+		var cnt = this.titleSlideCount
+			, bgCellWidth = 10, bgCellHeight = bgCellWidth
+			, titlePos = ((this.titleSlideCount * this.titleSlideRate) % (bgCellWidth * bgCellHeight)) | 0
+			, sx = titlePos % bgCellWidth
+			, sy = (titlePos / bgCellWidth) | 0
+			, x1 = 2, y1 = 4
+			, x2 = 7, y2 = 4
+			, view = scrollByName('view')
+			;
+		x1 = x1 - sx;
+		x2 = x1 + bgCellWidth;
+		y1 = y1 - (sy % bgCellHeight);
+		y2 = y2 - ((sy + 1)% bgCellHeight);
+		scrollByName('bg2').rasterto(view, 0, 0, null, null, cellhto(x1), cellhto(y1));
+		scrollByName('bg2').rasterto(view, 0, 0, null, null, cellhto(x2), cellhto(y2));
+		scrollByName('bg1').rasterto(view, 0, 0, null, null, 0, 0);
+		// scrollByName('bg2').rasterto(view, 0, 0, null, null, 0,0);
+		// scrollByName('bg2').rasterto(view, 0, 0, null, null, 0,0);
+		++this.titleSlideCount;
+		// if(this.titleSlideCount % 100 == 1){console.log(this.word8.spriteArray)};
+		// printDebug('y1: ' + y1 + ' y2: ' + y2 );
+
+	},
+	
+	//未使用
 	drawTitle: function()
 	{
+		return;
 		var bg = scrollByName('bg1')
 			, sub = this.titleSlideString
 			, slen = 6
@@ -1108,27 +1190,34 @@ LitroReceiver.prototype = {
 			, bright, phase, rot, cycle
 			, vol = this.player != null ? this.player.volume() : 0
 			, len = this.volumeSprites.length
-			, xk = cellhto(6), xv = cellhto(7), y = cellhto(3)
+			, xk = cellhto(6), xv = cellhto(7), yk = cellhto(3), yv = yk
 			, cl = COLOR_VOLUMES
 		;
+		
+		if(!this.isOpen || this.durativeVolume == vol){return;}
+		this.durativeVolume = vol;
+		
 		cycle = (vol / this.VOLUME_INC) | 0;
 		rot = ((cycle / 2) | 0) % 4;
-		spr = (cycle + 1) % 2 ? this.sprites.volKnob1 : this.sprites.volKnob2;
-		spr.rot(rot);
-		bg.drawSprite(spr, rot == 2 || rot == 3 ? xk - 1 : xk, rot == 1 || rot == 2 ? y + 1 : y);
+		spr = ((cycle + 1) % 2) == 1 ? this.sprites.volKnob1 : this.sprites.volKnob2;
 		
-		bg.drawSprite(this.sprites.black, xv, y);
+		spr.rot(rot);
+		xk -= (rot == 2 || rot == 3) ? 1 : 0;
+		yk += (rot == 1 || rot == 2) ? 1 : 0;
+		// bg.drawSprite(spr, (rot == 2 || rot == 3) ? xk - 1 : xk, (rot == 1 || rot == 2) ? y + 1 : y);
+		bg.drawSprite(spr, xk, yk);
+		bg.drawSprite(this.sprites.black, xv, yv);
 		spr = this.volumeSprites[((vol / (this.VOLUME_MAX / len)) | 0) % 8];
 		spr.resetSwapColor();
 		if(vol > this.VOLUME_MIN && vol < this.VOLUME_MAX){
-			bg.drawSprite(spr, xv, y);
+			bg.drawSprite(spr, xv, yv);
 		}else if(vol >= this.VOLUME_MAX){
 			spr = this.volumeSprites[len - 1];
 			spr.pushSwapColor(cl[0].r, cl[0].b);
 			spr.pushSwapColor(cl[1].r, cl[1].b);
 			spr.pushSwapColor(cl[2].r, cl[2].b);
 			spr.pushSwapColor(cl[3].r, cl[3].b);
-			bg.drawSprite(spr, xv, y);
+			bg.drawSprite(spr, xv, yv);
 		}
 
 		
@@ -1142,13 +1231,13 @@ LitroReceiver.prototype = {
 		var spr
 			, bg = scrollByName('sprite')
 			, bright, phase
-			, enables = this.litroSound != null ? this.litroSound.enableChannels() : null
+			, enables = this.litroSound != null ? this.player.enableChannels() : null
 		;
 		if(enables == null){return;}
 		for(i = 0; i < this.channelSprites.length; i++){
 			if(!enables[i]){continue;}
 			// console.log(this.litroSound.channel[i].envelopeClock);
-			phase = this.litroSound.getPhase(i);
+			phase = this.player.channel[i].getPhase();
 			// console.log(phase);
 			if(phase == '' || phase == 0){continue;}
 			spr = this.channelSprites[i];
@@ -1248,6 +1337,7 @@ LitroReceiver.prototype = {
 			default: break;
 		}
 		this.drawDebugCell();
+		this.drawVolumeSprite();
 		this.drawChannelSprites();
 		this.drawTitle();
 		// console.time('rep');
@@ -1423,8 +1513,8 @@ function printDebug(val, row){
 		// if(litroReceiverInstance == null){return;}
 		if(!imageResource.isload()){return;}
 		var scr = scrollByName('sprite'), ltrc = litroReceiverInstance
-			, word = ltrc.word
-			, mc = {x: 0, y: 29};
+			, word = ltrc.word4
+			, mc = {x: 0, y: 9};
 		;
 		if(row == null){
 			row = 0;
@@ -1432,11 +1522,13 @@ function printDebug(val, row){
 		if(word == null){
 			return;
 		}
+		
 		word.setFontSize('4v6px');
 		word.setMarkAlign('horizon');
+		word.setLineCols(null);
 		word.setScroll(scr);
 		word.setColor(COLOR_WHITE, COLOR_BLACK);
-		word.print(val, cellhto(mc.x), cellhto(mc.y - row));
+		word.print(val, cellhto(mc.x), cellhto(mc.y - row) + 2);
 };
 
 function drawLitroScreen()
@@ -1460,16 +1552,15 @@ function drawLitroScreen()
 	// ltrc.drawNoteTest();
 	// bg1.ctx.putImageData(imageResource.ctx.ui_8p.getImageData(0, 0, 128, 128), 0, 0);
 	ltrc.repeatDraw();
+			// ltrc.drawBgTitle();
+
 	drawCanvasStacks(spmax);
-	// bg2.drawSpriteChunk(makeSpriteQuery(ltrc.uiImageName, 'a'), 0,0 );
-	// if(ltrc.editMode != 'manual'){
-		// bg2.rasterto(view, 0, 0, null, DISPLAY_HEIGHT / 2, ltrc.bg2x.t + cellhto(ltrc.noteScrollCmargin.x), 0);
-		// bg2.rasterto(view, 0, DISPLAY_HEIGHT / 2, null, DISPLAY_HEIGHT / 2, ltrc.bg2x.b + cellhto(ltrc.noteScrollCmargin.x), 0);
-		// bg1.drawto(view);
-	// }else{
+	if(!ltrc.player.isPlay()){
 		bg2.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg2.x, ltrc.manualScrollParams.bg2.y);
 		bg1.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg1.x, ltrc.manualScrollParams.bg1.y);
-	// }
+	}else{
+		ltrc.drawBgTitle();
+	}
 
 	// printDebug(Math.round(litroSoundInstance.context.currentTime), 0);
 	// printDebug(testval);

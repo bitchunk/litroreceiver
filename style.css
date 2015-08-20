@@ -17,7 +17,7 @@ h1{
 }
 
 canvas{
-	/*-webkit-backface-visibility: hidden;*/
+	-webkit-backface-visibility: hidden;
 	-webkit-transform: translate(0, 0);
 	z-index:1;
 }
