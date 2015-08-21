@@ -177,10 +177,9 @@ LitroReceiver.prototype = {
 		//
 
 		this.litroSound.init(CHANNELS_NUM);
-		// this.player.init("system", this.litroSound);
-		// this.sePlayer.init("se", this.litroSound);
+
+		// this.sePlayer.init("se");
 		this.player.init("system");
-		this.sePlayer.init("se");
 		
 		// this.durativeVolume = this.player.volume();
 		
@@ -539,6 +538,7 @@ LitroReceiver.prototype = {
 			self.initPlayTappables();
 			self.initTapReturn();
 			self.initPlayFlickables();
+			
 			return false;
 		}, 'play');
 	},	
@@ -1265,6 +1265,7 @@ LitroReceiver.prototype = {
 		spr.drawSprite(this.sprites.cellCursorSprite, cellhto(cx), cellhto(cy));
 	},
 	
+	//未使用
 	clearLeftScreen: function()
 	{
 		var scr = scrollByName('bg1')
@@ -1274,6 +1275,7 @@ LitroReceiver.prototype = {
 		scr.clear(COLOR_BLACK, makeRect(cellhto(cm.x), cellhto(cm.y), cellhto(size.w), cellhto(size.h)));
 	},
 	
+	//未使用
 	blinkDraw: function()
 	{
 		var scrpos, i, sparam, scr = scrollByName('sprite');
@@ -1293,6 +1295,7 @@ LitroReceiver.prototype = {
 		}, this);
 	},
 	
+	//未使用
 	scrollManual: function()
 	{
 		var params = this.manualScrollParams
@@ -1344,6 +1347,8 @@ LitroReceiver.prototype = {
 		// console.timeEnd('rep');
 
 	},
+	
+	//未使用
 	drawOnBaseKey: function(code, status){
 		if(this.getMode() == 'manual'){return;}
 
