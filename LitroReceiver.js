@@ -1702,7 +1702,7 @@ LitroReceiver.prototype = {
 			url += [
 				'url=' + encodeURIComponent('http://' + location.host + location.pathname 
 				+ (file.sound_id == 0 ? '' : '?sound_id=' + file.sound_id)),
-				'text=' + encodeURIComponent(file.sound_id == 0 ? 'ブラウザでPSG音源DTM！' : ('"'+ file.title + '" play on the litrokeyboard!!')),
+				'text=' + encodeURIComponent(file.sound_id == 0 ? '' : ('"'+ file.title + '" play on the litroreceiver!!')),
 				'hashtags=' + encodeURIComponent('litrokeyboard,dtm'),
 				// 'via=' + 'LitroKeyboard'
 				].join('&');
