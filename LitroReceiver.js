@@ -50,6 +50,11 @@ function LitroReceiver() {
 	this.frameChunks = []; //背景フレーム用ChunkRepeat
 	this.frameSprites = {}; //背景フレーム用spriteChunk
 	this.frameChunksKeys = {}; //framechunksのkeyインデックス重複はArray
+	this.frameOpenBgPos = {x:0, y:0} //背景フレーム用位置調整
+	this.isAnimTransition = {};
+	this.countAnimTransition = {};
+	this.callBackAnimTransition = {};
+	this.functionAnimTransition = {}
 	
 	this.isOpen = false;
 	
@@ -74,6 +79,7 @@ function LitroReceiver() {
 
 	this.debugCell = false;
 	this.debugCellPos = {x: 0, y :0};
+	this.debugPage = 0;
 	
 	
 	this.VOLUME_INC = VOLUME_CELLSIZE
@@ -147,8 +153,10 @@ LitroReceiver.prototype = {
 			// self.drawFrameParts(1);
 			// self.openFrame();
 			self.initTappables();
-			self.initOpenTappables();
 			self.initFlickables();
+
+			self.initOpenTappables();
+
 			requestAnimationFrame(main);
 
 		});
@@ -203,11 +211,13 @@ LitroReceiver.prototype = {
 	
 	initViewMode: function(){
 		var href = window.location.href
-			, sound_id = href.match(/[?|&]+sound_id\=([0-9]+)/)
-			, step = href.match(/[?|&]+step\=([0-9]+)/)
-			, multi = href.match(/[?|&]+screen\=([0-9]+)/)
-			, buff = href.match(/[?|&]+buff\=([0-9a-zA-Z]+)/)
-			, debug = href.match(/[?|&]+debug\=([0-9]+)/)
+			, match ={
+				 sound_id: href.match(/[?|&]+sound_id\=([0-9]+)/)
+				, step: href.match(/[?|&]+step\=([0-9]+)/)
+				, multi: href.match(/[?|&]+screen\=([0-9]+)/)
+				, buff: href.match(/[?|&]+buff\=([0-9a-zA-Z]+)/)
+				, debug: href.match(/[?|&]+debug\=([0-9]+)/)
+			}
 			, self = this
 			, scr = document.getElementById('screen')
 			, mfunc = function(e){
@@ -217,10 +227,15 @@ LitroReceiver.prototype = {
 					// e.preventDefault();
 					// e.stopPropagation();
 				}
+			, debugPartsFunc = function(e){
+				console.log(self.debugPage);
+				self.debugPage = (self.debugPage + 1) % 7;
+				self.drawFrameParts(self.debugPage);
+			}
 			;
 			
-		if(buff != null){
-			PROCESS_BUFFER_SIZE = parseInt(buff[1], 10) == null ? 4096 : buff[1];
+		if(match.buff != null){
+			PROCESS_BUFFER_SIZE = parseInt(match.buff[1], 10) == null ? 4096 : match.buff[1];
 			if(this.litroSound.context != null){
 				this.litroSound.connectOff();
 				this.litroSound.createContext(PROCESS_BUFFER_SIZE);;
@@ -228,21 +243,21 @@ LitroReceiver.prototype = {
 			this.analysedData = new Uint8Array(PROCESS_BUFFER_SIZE * this.analyseRate);
 			this.analysedData_b = new Uint8Array(PROCESS_BUFFER_SIZE * this.analyseRate);
 		}
-		if(step != null){
-			this.noteRangeScale = (step[1] | 0) * this.noteRangeCells;
+		if(match.step != null){
+			this.noteRangeScale = (match.step[1] | 0) * this.noteRangeCells;
 		}
-		if(multi != null){
-			if(multi[1] == 0){
+		if(match.multi != null){
+			if(match.multi[1] == 0){
 				this.hiddenScreen = true;
-				multi[1] = 1;
+				match.multi[1] = 1;
 			}
-			VIEWMULTI = multi[1] | 0;
+			VIEWMULTI = match.multi[1] | 0;
 			// console.log(VIEWMULTI);
 		}
-		if(sound_id != null){
+		if(match.sound_id != null){
 			this.viewMode = 'full';
 			this.editMode = 'play';
-			this.player.loadFromServer(this.loginParams.user_id, sound_id[1], 
+			this.player.loadFromServer(this.loginParams.user_id, match.sound_id[1], 
 			function(data){
 				var player = self.player, s = self.titleSlideSpace;
 					if(data == null || data === false){
@@ -257,10 +272,16 @@ LitroReceiver.prototype = {
 					self.setError(data != null ? data : {error_code: 0, message: 'error'});
 				});
 		}
-		if(debug != null){
+		if(match.debug != null){
 			this.debugCell = true;
 			scr.addEventListener('mousemove', mfunc, false);
 			scr.addEventListener('touchmove', mfunc, false);
+			switch(match.debug[1] | 0){
+				case 2:
+				scr.addEventListener('mouseup', debugPartsFunc, false);
+				scr.addEventListener('touchend', debugPartsFunc, false);
+				break;
+			}
 			
 		}
 		return;
@@ -348,8 +369,8 @@ LitroReceiver.prototype = {
 		word.setFontSize('4v6px');
 		word.rowSpace = 0;
 		word.setLineCols(6);
-		word.setMaxRows(1);
-		word.setMarkAlign('vertical');
+		word.setMaxRows(2);
+		word.setMarkAlign('holizon');
 		this.word4 = word;
 	},
 	
@@ -360,7 +381,7 @@ LitroReceiver.prototype = {
 		makeScroll('bg1', false);
 		makeScroll('bg2', false);
 		makeScroll('sprite', false);
-		makeScroll('tmp', false);
+		// makeScroll('tmp', false);
 		
 		var bg1 = scrollByName('bg1')
 			, bg2 = scrollByName('bg2')
@@ -371,7 +392,7 @@ LitroReceiver.prototype = {
 		scr.clear(COLOR_BLACK);
 		view.clear(COLOR_BLACK);
 		bg1.clear(COLOR_BLACK);
-		bg2.clear();
+		bg2.clear(COLOR_BLACK);
 		spr.clear();
 	},
 	
@@ -407,11 +428,12 @@ LitroReceiver.prototype = {
 		// this.word.setFontSize('8px');
 		mk('cellCursorSprite', 88, this.word8.imageName);
 		
-		mk('pwLamp1', 34);
-		mk('pwLamp2', 152);
-		mk('pwLamp3', 136);
+		mk('pwLamp1', 72);
+		mk('pwLamp2', 88);
+		mk('pwLamp3', 104);
+		mk('pwLamp3', 120);
 		
-		mk('black', 42);
+		mk('black', 16);
 		mk('volKnob1', 200);
 		mk('volKnob2', 201);
 		
@@ -443,21 +465,77 @@ LitroReceiver.prototype = {
 		;
 		
 		this.frameSprites = {
-			closeFrame: msq('1-1:0-3 2-2:0-3*6 1-1:0-3|fh'),
-			closeShine: msq('0-1:5-7 82 83*2 0 84 85'),
-			zenmai1: msq('106 107'),
-			zenmai2: msq('108 109'),
+			closeFrame_1: msq('1+1:0+4 2+1:0+4*6 1+1:0+4|fh'),
+			closeFrame_2: msq('3+1:0+4 4+1:0+4*6 3+1:0+4|fh'),
+			closeFrame_3: msq('5+1:0+4 6+1:0+4*6 5+1:0+4|fh'),
+			closeShine_1: msq('0+8:4+1;0+2:7+2'),
+			closeShine_2: msq('0+8:5+1;2+2:7+2'),
+			closeShine_3: msq('0+8:6+1;4+2:7+2'),
+			zenmai_1: msq('121'),
+			zenmai_2: msq('122'),
+			zenmai_con_1: msq('136'),
+			zenmai_con_2: msq('137'),
+			zenmai_con_3: msq('138'),
+			zenmai_con_4: msq('139'),
 			
-			power_off: msq('9+1:6+2 9+1:6+2|fh'),
+			power_off_1: msq('0+1:9+2 0+1:9+2|fh'),
+			power_off_2: msq('2+1:9+2 2+1:9+2|fh'),
+			power_off_3: msq('3+1:9+2 3+1:9+2|fh'),
 			
+			power_on: msq('1+1:9+2 1+1:9+2|fh'),
+
 			
-			openFrame: msq(
-				'8-8:0-3 (9;42^3)*6 8-8:0-3|fh'
-				+ '!;10 26 58*4 26 10|fh'
-				+ '!;(9-9:1-3!;8|fv) (42^3!;9|fv)*6 (9-9:1-3!;8|fv)|fh'
+			litoni_close_1: msq('13+3:4+3'),
+			litoni_close_b: msq('13+3:7+3'),
+			litoni_close_2: msq('13+3:10+3'),
+			litoni_close_3: msq('13+3:13+3'),
+			
+			litoni_hand_1: msq('10+3:13+1'),
+			litoni_hand_2: msq('10+3:14+1'),
+			litoni_hand_3: msq('10+3:15+1'),
+
+			litoni_wing_1: msq('11+1:10+1 0 0 12+1:10+1'),
+			litoni_wing_2: msq('11+1:11+1 0 0 12+1:11+1'),
+			litoni_wing_3: msq('11+1:12+1 0 0 12+1:12+1'),
+
+			openFrame_1: msq(
+				'(8;8+1:1+2) (9;123^2)*6 8+1:0+3|fh'
+				+ '!;14 15 56*4 15 14|fh'
+				+ '!;(9+1:1+2!;8|fv) (123^2!;9|fv)*6 (9+1:1+2!;8|fv)|fh'
 				),
-			openShaft: msq('10+1:7+3 (0*6)^3 10+1:7+3|fh'),
-			openShine: msq('(128;144;128;0)^2 (0^8)*6 ((128;144;128;0)|fh)^2'),
+				
+			openFrame_2: msq(
+				'(10;10+1:1+3) (11;63;123^2)*6 (10;10+1:1+3)|fh'
+				+ '!;30 31 57*4 31 30|fh'
+				+ '!;(11+1:1+3!;10|fv) (123^3!;11|fv)*6 (11+1:1+3!;10|fv)|fh'
+				),
+				
+			openFrame_3: msq(
+				'(12;12+1:1+3) (13;123^3)*6 (12;12+1:1+3)|fh'
+				+ '!;46 47 62*4 47 46|fh'
+				+ '!;(13+1:1+3!;12|fv) (123^3!;13|fv)*6 (13+1:1+3!;12|fv)|fh'
+				),
+				
+			openShaft_1: msq('(73;89;105) (0*6)^3 (73;89;105)|fh'),
+			openShaft_2: msq('(74;90;106) (0*6)^3 (74;90;106)|fh'),
+			openShaft_3: msq('(75;91;107) (0*6)^3 (75;91;107)|fh'),
+			
+			power_on_top_1: msq('148 148|fh'),
+			power_on_top_2: msq('149 149|fh'),
+			power_on_top_3: msq('150 150|fh'),
+			
+			power_on_bottom_1: msq('164 164|fh'),
+			power_on_bottom_2: msq('165 165|fh'),
+			power_on_bottom_3: msq('166 166|fh'),
+			
+				// openFrame: msq(
+				// '8-8:0-3 (9;42^3)*6 8-8:0-3|fh'
+				// + '!;10 26 58*4 26 10|fh'
+				// + '!;(9-9:1-3!;8|fv) (42^3!;9|fv)*6 (9-9:1-3!;8|fv)|fh'
+				// ),
+			// openShaft: msq('10+1:7+3 (0*6)^3 10+1:7+3|fh'),
+			// openShine: msq('(128;144;128;0)^2 (0^8)*6 ((128;144;128;0)|fh)^2'),
+
 			power_on_top: msq('137 137|fh'),
 			power_on_bottom: msq('153 153|fh'),
 			
@@ -467,44 +545,12 @@ LitroReceiver.prototype = {
 			stopButton: msq('8+2:13+2'),
 			returnButton: msq('4+2:13+2'),
 			
-			
-			// power_close_top: msc([9, 8, 1, 1]),
-			// power_close_bottom: msc([9, 9, 1, 1]),
-			// shineTopClose: msm([[80, 81, 82, 83, 83, 0, 84, 85]]),
-			// shineBottomClose: msm([[96, 97], [112, 113]]),
-			
-			// sideOpenFrameTop: msm([[8], [24], [40], [24], [25]]),
-			// sideOpenFrameBottom: msm([56], [72], [40], [24], [25]]),
- 			
-			// rightOpenFrame: msc([2, 1, 1, 4]),
-			// leftDispEdge: msc([9, 2, 2, 1]),
-			
-			//, [0, 0, 1, 1]),
-			
-			//Not openframe
 			noteStart: ms(5),
 
 		};
 		
-		//閉じ
-		// mcc('sideCloseFrame', [1, 6, 1, 1]);
-		// mcc('centerCloseFrame', [2, 6, 6, 1]);
-		// mcc('sideCloseFrame', [8, 6, 1, 1], {h: true, v:false});
-		// mcc('zenmai_1', [8, 8, 1, 1]);
-		// mcc('zenmai_2', [0, 0, 1, 1]);
-		// mcc('shineTopClose', [1, 6, 1, 1]);
-		// mcc('shineBottomClose', [1, 7, 1, 1]);
-		
 		mcc('power_open', [4, 7, 1, 1]);
 		mcc('power_open', [5, 7, 1, 1], {h: true, v: false});
-		
-		
-		//開き
-		
-	
-		// mcc('baseKeyDisp', [18, 12, 1, 1]),
-		
-		// this.frameChunksKeys = {};
 	},
 	
 	initControllDisp: function()
@@ -525,20 +571,78 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
-			, scr = document.getElementById('screen')
 		;
 		this.clearTappableItem();
 		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
-			self.isOpen = true;
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
-			self.drawFrameParts(1);
+			// self.drawFrameParts(1);
+
+			self.startAnimation('f_open', function(cnt, k)
+				{
+					var c = cnt
+					, aFrame = {	0: 0, 4: 1, 8: 2, 12: 3, 16: 5, 20: 4, 24: 5, 32: 6} 
+					if(aFrame[c] == null){return false;}
+					self.drawFrameParts(aFrame[c]);
+			
+					if(c >= 28){
+						return true;
+					}
+					return false;
+				}, 
+				function(){
+					self.drawVolumeSprite();
+					self.isOpen = true;
+				}
+			);
 
 			self.clearTappableItem();
+			self.initCloseTappables();
 			self.initPlayTappables();
 			self.initTapReturn();
 			self.initPlayFlickables();
 			
+			return false;
+		}, 'play');
+	},
+	
+	initCloseTappables: function()
+	{
+		var c = cellhto
+			, bg2 = scrollByName('bg2')
+			, bg1 = scrollByName('bg1')
+			, self = this, fs = this.frameSprites
+		;
+		// this.clearTappableItem();
+		this.appendTappableItem(makeRect(c(4), c(1), c(2), c(1)), function(){
+			self.player.stop();
+			self.player.finishChannelEnvelope();
+			self.litroSound.connectOff();
+			self.clearTappableItem();
+			self.clearTapStartItem();
+			self.clearFlickableItem();
+			// self.clearTapEndItem();
+			// self.drawFrameParts(0);
+			self.initOpenTappables();
+			bg2.clear();
+			self.isOpen = false;
+			// bg2.clear();
+			
+			self.startAnimation('f_close', function(cnt, k)
+				{
+					var c = cnt
+					, aFrame = {	0: 5, 4: 4, 8: 3, 12: 2, 16: 0} 
+					if(aFrame[c] == null){return false;}
+					self.drawFrameParts(aFrame[c]);
+			
+					if(c >= 16){
+						return true;
+					}
+					return false;
+				}, 
+				function(){
+				}
+			);
 			return false;
 		}, 'play');
 	},	
@@ -1081,32 +1185,129 @@ LitroReceiver.prototype = {
 			, cto = cellhto
 			, drawc = function(s, x, y){scr.drawSpriteChunk(s, x, y);}
 			, draws = function(s, x, y){scr.drawSprite(s, x, y);}
+			, pos = this.frameOpenBgPos
+
 		;
 		scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT));
 		switch(num){
 			case 0: 
-			drawc(f.closeFrame, cto(1), cto(6));
-			drawc(f.closeShine, cto(1), cto(6));
-			drawc(f.zenmai1, cto(8), cto(8));
-			drawc(f.power_off, cto(4), cto(7));
-			draws(spr.pwLamp3, cto(2), cto(8));
+			drawc(f.closeFrame_1, cto(1), cto(6));
+			drawc(f.closeShine_1, cto(1), cto(6));
+			drawc(f.zenmai_1, cto(9), cto(8));
+			drawc(f.zenmai_con_1, cto(8), cto(8));
+			drawc(f.power_off_1, cto(4), cto(7));
+			drawc(f.litoni_wing_1, cto(3), cto(5) - 2);
+			drawc(f.litoni_close_1, cto(3.5), cto(3) + 2);
+			drawc(f.litoni_hand_1, cto(3.5), cto(6));
+			draws(spr.pwLamp1, cto(2), cto(8) + 1);
+			pos.x = 0;
+			pos.y = 0;
 			break;
-			case 1:
-			drawc(f.openFrame, cto(1), cto(1));
-			drawc(f.openShaft, cto(1), cto(4));
-			drawc(f.openShine, cto(1), cto(2));
-			drawc(f.power_on_top, cto(4), cto(1));
-			drawc(f.power_on_bottom, cto(4), cto(9));
+			
+			case 1: 
+			// scrollByName('bg1').clear(null, makeRect(cto(0), cto(9), cto(9), cto(1)));
+			drawc(f.closeFrame_2, cto(1), cto(6));
+			drawc(f.closeShine_2, cto(1), cto(6));
+			drawc(f.zenmai_1, cto(9), cto(8));
+			drawc(f.zenmai_con_2, cto(8), cto(8));
+			drawc(f.power_off_2, cto(4), cto(7));
+			drawc(f.litoni_wing_2, cto(3), cto(5) - 1);
+			drawc(f.litoni_close_2, cto(3.5), cto(3) + 2);
+			drawc(f.litoni_hand_2, cto(3.5), cto(6) - 1);
+			draws(spr.pwLamp2, cto(2), cto(8) + 2);
+			pos.x = 0;
+			pos.y = -1;
+			break;
+			
+			case 2: 
+			drawc(f.closeFrame_3, cto(1), cto(6));
+			drawc(f.closeShine_3, cto(1), cto(6));
+			drawc(f.zenmai_1, cto(9), cto(8));
+			drawc(f.zenmai_con_3, cto(8), cto(8));
+			drawc(f.power_off_3, cto(4), cto(7) + 1);
+			drawc(f.litoni_wing_3, cto(3), cto(5) + 1);
+			drawc(f.litoni_close_3, cto(3.5), cto(3) + 2);
+			drawc(f.litoni_hand_3, cto(3.5), cto(6) - 2);
+			draws(spr.pwLamp3, cto(2), cto(8) + 3);
+			pos.x = 0;
+			pos.y = -2;
+			break;
+			
+			case 3: 
+			drawc(f.openFrame_1, cto(1), cto(3) );
+			drawc(f.openShaft_1, cto(1), cto(5));
+			drawc(f.power_on_top_1, cto(4), cto(3));
+			drawc(f.power_on_bottom_1, cto(4), cto(9));
+			drawc(f.zenmai_1, cto(9), cto(7.5));
+			drawc(f.zenmai_con_4, cto(8), cto(7.5));
+			pos.x = 0;
+			pos.y = 1;
+			break;
+			
+			case 4: 
+			drawc(f.openFrame_2, cto(1), cto(1) );
+			drawc(f.openShaft_2, cto(1), cto(4));
+			drawc(f.power_on_top_2, cto(4), cto(1));
+			drawc(f.power_on_bottom_2, cto(4), cto(9));
+			drawc(f.zenmai_1, cto(9), cto(7) + 1);
+			drawc(f.zenmai_con_4, cto(8), cto(7) + 1);
+			pos.x = 0;
+			pos.y = 0;
+			break;
+			
+			case 5:
+			drawc(f.openFrame_3, cto(1), cto(1));
+			drawc(f.openShaft_3, cto(1), cto(4));
+			drawc(f.power_on_top_3, cto(4), cto(1));
+			drawc(f.power_on_bottom_3, cto(4), cto(9));
+			drawc(f.zenmai_1, cto(9), cto(7) + 1);
+			drawc(f.zenmai_con_4, cto(8), cto(7) + 1);
+			pos.x = 0;
+			pos.y =0;
+			
+			// drawc(f.openShaft, cto(1), cto(4));
+			// drawc(f.openShine, cto(1), cto(2));
+			// drawc(f.power_on_top, cto(4), cto(1));
+			// drawc(f.power_on_bottom, cto(4), cto(9));
+// 			
+			break;
+			
+			case 6:
+			drawc(f.openFrame_3, cto(1), cto(1));
+			drawc(f.openShaft_3, cto(1), cto(4));
+			drawc(f.power_on_top_3, cto(4), cto(1));
+			drawc(f.power_on_bottom_3, cto(4), cto(9));
+			drawc(f.zenmai_1, cto(9), cto(7) + 1);
+			drawc(f.zenmai_con_4, cto(8), cto(7) + 1);
 			drawc(f.mainFlickArea, cto(2), cto(6));
 			drawc(f.mainButtons, cto(2), cto(7));
-			
-			this.drawVolumeSprite();
+			this.drawVolumeSprite(true);
 			scrollByName('bg1').clear(null, makeRect(cellhto(this.titleCmargin.x), cellhto(this.titleCmargin.y), cellhto(this.titleCellWidth), cellhto(this.titleCellHeight)));
-			break;
+			pos.x = 0;
+			pos.y =0;
+			
+			
 		}
 
 	},
-
+	
+	startAnimation: function(anim, func, callback)
+	{
+		this.isAnimTransition[anim] = true;
+		this.countAnimTransition[anim] = 0;
+		this.functionAnimTransition[anim] = func == null ? null : func;
+		this.callBackAnimTransition[anim] = callback == null ? null : callback;
+	},
+	
+	endAnimation: function(anim)
+	{
+		this.isAnimTransition[anim] = false;
+		// this.countAnimTransition[anim] = 0;
+		if(this.callBackAnimTransition[anim] != null){
+			this.callBackAnimTransition[anim]();
+		};
+	},
+	
 	setChannelSprite: function(ch, key)
 	{
 		var spr = this.channelSprites[ch]
@@ -1183,7 +1384,7 @@ LitroReceiver.prototype = {
 		++this.titleSlideCount;
 	},
 	
-	drawVolumeSprite: function()
+	drawVolumeSprite: function(force)
 	{
 		var spr
 			, bg = scrollByName('bg1')
@@ -1193,8 +1394,10 @@ LitroReceiver.prototype = {
 			, xk = cellhto(6), xv = cellhto(7), yk = cellhto(3), yv = yk
 			, cl = COLOR_VOLUMES
 		;
-		
-		if(!this.isOpen || this.durativeVolume == vol){return;}
+		force == null ? false : force;
+		if(!force){
+			if(!this.isOpen || this.durativeVolume == vol){return;}
+		}
 		this.durativeVolume = vol;
 		
 		cycle = (vol / this.VOLUME_INC) | 0;
@@ -1234,6 +1437,7 @@ LitroReceiver.prototype = {
 			, enables = this.litroSound != null ? this.player.enableChannels() : null
 		;
 		if(enables == null){return;}
+		if(!this.isOpen){return;}
 		for(i = 0; i < this.channelSprites.length; i++){
 			if(!enables[i]){continue;}
 			// console.log(this.litroSound.channel[i].envelopeClock);
@@ -1252,13 +1456,14 @@ LitroReceiver.prototype = {
 		var spr = scrollByName('sprite')
 			, cx = this.debugCellPos.x, cy = this.debugCellPos.y
 			, x = cellhto(cx - (cx < 1 ? 0 : 1))
-			, y = cellhto(cy - (cy < 2 ? -2 : 2))
+			, y = cellhto(cy - (cy < 2 ? -1 : 2))
 			, str = (cx < 10 ? 'x:0' : 'x:') + cx + '$n'
 			 + (cy < 10 ? 'y:0' : 'y:') + cy + ''
 			;
 		if(!this.debugCell || this.word4 == null){
 			return;
 		}
+		// console.log(str, x, y);
 		this.word4.setScroll(spr);
 		this.word4.print(str, x, y);
 		
@@ -1333,12 +1538,34 @@ LitroReceiver.prototype = {
 		// console.log(params.pos.x);
 	},
 	
+	animTransition: function()
+	{
+		var k
+			, is = this.isAnimTransition
+			, func = this.functionAnimTransition
+			, cback = this.callBackAnimTransition
+			, cnt = this.countAnimTransition
+		;
+		
+		for(k in is){
+			if(!is[k] || func[k] == null){continue;}
+			// console.log(cnt[k], k)
+			if(func[k](cnt[k], k)){
+				this.endAnimation(k);
+				continue;
+			};
+			cnt[k]++;
+		}
+	},
+	
 	repeatDraw: function()
 	{
 		//channel note file play
 		switch(this.playMode){
 			default: break;
 		}
+		
+		this.animTransition();
 		this.drawDebugCell();
 		this.drawVolumeSprite();
 		this.drawChannelSprites();
@@ -1562,7 +1789,7 @@ function drawLitroScreen()
 	drawCanvasStacks(spmax);
 	if(!ltrc.player.isPlay()){
 		bg2.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg2.x, ltrc.manualScrollParams.bg2.y);
-		bg1.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg1.x, ltrc.manualScrollParams.bg1.y);
+		bg1.rasterto(view, 0, 0, null, null, ltrc.frameOpenBgPos.x, ltrc.frameOpenBgPos.y);
 	}else{
 		ltrc.drawBgTitle();
 	}
@@ -1573,7 +1800,7 @@ function drawLitroScreen()
 	spr.clear();
 	// view.drawto(view);
 	
-	screenView(scr, view, VIEWMULTI);
+	screenView(scr, view);
 	// console.log(scr.canvas.width);
 	return;
 
