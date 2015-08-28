@@ -540,7 +540,9 @@ LitroReceiver.prototype = {
 			power_on_bottom: msq('153 153|fh'),
 			
 			mainFlickArea: msq('0 208*4 0'),
-			mainButtons: msq('2+6:13+2'),
+			menuButtons: msq('2+6:13+2'),
+			
+			shareButton: msq('2+2:13+2'),
 			playButton: msq('6+2:13+2'),
 			stopButton: msq('8+2:13+2'),
 			returnButton: msq('4+2:13+2'),
@@ -599,6 +601,7 @@ LitroReceiver.prototype = {
 			self.clearTappableItem();
 			self.initCloseTappables();
 			self.initPlayTappables();
+			self.initTapShare();
 			self.initTapReturn();
 			self.initPlayFlickables();
 			
@@ -659,27 +662,25 @@ LitroReceiver.prototype = {
 		this.appendTappableItem(rect, function(){
 			if(self.player.isPlay()){
 				self.player.stop();
+				fs.playButton = setSwapColorSprite(fs.playButton);
 				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}else{
 				self.player.play();
-				// self.setTitle(self.titleSlideString);
+				fs.stopButton = setSwapColorSprite(fs.stopButton);
 				self.setTitle(self.player.title, self.player.fileUserName);
-				
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
 			}
 			return false;
 		}, 'play');
 		this.appendTapStartItem(rect, function(){
 			if(self.player.isPlay()){
-				fs.playButton = setSwapColorSprite(fs.playButton, cw, cb, true);
-				fs.playButton = setSwapColorSprite(fs.playButton, cb, cw);
-				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
-				fs.playButton = setSwapColorSprite(fs.playButton);
-			}else{
 				fs.stopButton = setSwapColorSprite(fs.stopButton, cb, cw, true);
 				fs.stopButton = setSwapColorSprite(fs.stopButton, cw, cb);
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
-				fs.stopButton = setSwapColorSprite(fs.stopButton);
+			}else{
+				fs.playButton = setSwapColorSprite(fs.playButton, cw, cb, true);
+				fs.playButton = setSwapColorSprite(fs.playButton, cb, cw);
+				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}
 			return false;
 		}, 'play');
@@ -690,7 +691,6 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
-			, scr = document.getElementById('screen')
 			, rect = makeRect(c(4), c(7), c(2), c(2))
 			, pos = {x: c(4), y: c(7)}
 			, cw = COLOR_DISP_B , cb = COLOR_BLACK
@@ -705,9 +705,32 @@ LitroReceiver.prototype = {
 			setSwapColorSprite(fs.returnButton, cw, cb, true);
 			setSwapColorSprite(fs.returnButton, cb, cw);
 			bg.drawSpriteChunk(fs.returnButton, pos.x, pos.y);
-			setSwapColorSprite(fs.returnButton);
 			return false;
-		}, 'play');	},
+		}, 'play');
+	},
+	
+	initTapShare: function()
+	{
+		var c = cellhto
+			, bg = scrollByName('bg1')
+			, self = this, fs = this.frameSprites
+			, pos = {x: c(2), y: c(7)}
+			, rect = makeRect(pos.x, pos.y, c(2), c(2))
+			, cw = COLOR_DISP_B , cb = COLOR_BLACK
+		;
+		this.appendTappableItem(rect, function(){
+			self.openShareWindow('TWITTER', self.player);
+			setSwapColorSprite(fs.shareButton);
+			bg.drawSpriteChunk(fs.shareButton, pos.x, pos.y);
+			return false;
+		}, 'play');
+		this.appendTapStartItem(rect, function(){
+			setSwapColorSprite(fs.shareButton, cw, cb, true);
+			setSwapColorSprite(fs.shareButton, cb, cw);
+			bg.drawSpriteChunk(fs.shareButton, pos.x, pos.y);
+			return false;
+		}, 'play');
+	},
 	
 	initTappables: function()
 	{
@@ -1280,7 +1303,7 @@ LitroReceiver.prototype = {
 			drawc(f.zenmai_1, cto(9), cto(7) + 1);
 			drawc(f.zenmai_con_4, cto(8), cto(7) + 1);
 			drawc(f.mainFlickArea, cto(2), cto(6));
-			drawc(f.mainButtons, cto(2), cto(7));
+			drawc(f.menuButtons, cto(2), cto(7));
 			this.drawVolumeSprite(true);
 			scrollByName('bg1').clear(null, makeRect(cellhto(this.titleCmargin.x), cellhto(this.titleCmargin.y), cellhto(this.titleCellWidth), cellhto(this.titleCellHeight)));
 			pos.x = 0;
@@ -1642,6 +1665,36 @@ LitroReceiver.prototype = {
 
 	},
 	
+	openButtonsWindow: function()
+	{
+		var c = cellhto
+			, crect = {x:c(4), y:c(23), w: c(40), h: c(15)}
+			, r = makeRect(crect.x, crect.y, crect.w, crect.h)
+			, bg = scrollByName('bg1')
+			, view = scrollByName('view')
+			, spr = makeSprite(this.snsImageName, 0)
+			, self = this, word = this.word
+			, iconCrect = {x: 18, y: 26, w:2, h: 2} //this.snsIconCmargin
+		;
+		view.y = cellhto(7);
+		bg.clear(COLOR_BLACK, r);
+		bg.drawSprite(spr, cellhto(iconCrect.x), cellhto(iconCrect.y));
+		word.setScroll(bg);
+		word.setFontSize('8px');
+		word.setLineCols(0);
+		word.setMarkAlign('horizon');
+		word.print('Click SNS Icon for Login', crect.x + cellhto(1), crect.y + cellhto(1), COLOR_WHITE, COLOR_BLACK);
+		this.appendTappableItem(makeRect(cellhto(iconCrect.x), cellhto(iconCrect.y), cellhto(iconCrect.w), cellhto(iconCrect.h)), itemFunc, 'TWITTER');
+		
+		window.document.getElementById('screen').onclick = function(e){
+			var bounds = this.getBoundingClientRect(), w = view.canvas.width, h = view.canvas.height
+				, x = ((((e.clientX - bounds.left) / VIEWMULTI) | 0) - view.x + w) % w
+				, y = ((((e.clientY - bounds.top) / VIEWMULTI) | 0) - view.y + h) % h
+			;
+			self.touchStartEvent(x, y);
+		};
+	},
+	
 	openShareWindow: function(type, file)
 	{
 		var url = this.shareURLs[type];
@@ -1655,13 +1708,14 @@ LitroReceiver.prototype = {
 				].join('&');
 			}
 		window.open(url, null,"width=640,height=480,scrollbars=yes");
-		this.closeSNSTab();
-		this.changeEditMode('file');
+		// this.closeSNSTab();
+		// this.changeEditMode('file');
 		// this.clearMenu();
-		this.drawMenu();
-		this.drawFileMenu();
-		this.drawFileMenuCursor();
-		this.clearLeftScreen();
+		// this.drawMenu();
+		// this.drawFileMenu();
+		// this.drawFileMenuCursor();
+		// this.clearLeftScreen();
+		// this.
 	},
 
 	closeManual: function()
