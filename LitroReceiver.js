@@ -46,6 +46,10 @@ var COLOR_VOLUMES = [
 var USER_ID = 0;
 
 function LitroReceiver() {
+	var mr = function(x, y, w, h){
+		var c = cellhto;
+		return makeRect(c(x), c(y), c(w), c(h))
+	};
 	
 	this.frameChunks = []; //背景フレーム用ChunkRepeat
 	this.frameSprites = {}; //背景フレーム用spriteChunk
@@ -55,6 +59,7 @@ function LitroReceiver() {
 	this.countAnimTransition = {};
 	this.callBackAnimTransition = {};
 	this.functionAnimTransition = {}
+	this.prevDrawFramePartsNum = -1;
 	
 	this.isOpen = false;
 	
@@ -90,6 +95,16 @@ function LitroReceiver() {
 
 	this.menuDispCmargin = {x: 24, y: 17};
 	this.snsCmargin = {x:34, y:17};
+	
+	this.rects = {
+		play: mr(6, 7, 2, 2)
+		, 'return': mr(4, 7, 2, 2)
+		, share: mr(2, 7, 2, 2)
+		, volume: mr(2, 6, 6, 1)
+		, open: mr(4, 7, 2, 2)
+		, close: mr(4, 1, 2, 1)
+		, 'screen': mr(0, 0, 10, 10)
+	};
 
 	this.finalConf = ["NO", "OK"];
 	this.loginParams = {user_id: 0, sns_type: null, user_name: null};
@@ -148,14 +163,14 @@ LitroReceiver.prototype = {
 			self.imageLoaded = true;
 			self.initSprite();
 			self.initFrameSprites();
+			self.touchEndEvent();
 			
-			self.drawFrameParts(0);
-			// self.drawFrameParts(1);
-			// self.openFrame();
+			self.drawFrameParts(1);
 			self.initTappables();
 			self.initFlickables();
 
 			self.initOpenTappables();
+			// self.initOpenFlickables();
 
 			requestAnimationFrame(main);
 
@@ -224,11 +239,10 @@ LitroReceiver.prototype = {
 					var pos = self.getTouchPos(e);
 					self.debugCellPos.x = (pos.x / cellhto(1)) | 0;
 					self.debugCellPos.y = (pos.y / cellhto(1)) | 0;
-					// e.preventDefault();
+					e.preventDefault();
 					// e.stopPropagation();
 				}
 			, debugPartsFunc = function(e){
-				console.log(self.debugPage);
 				self.debugPage = (self.debugPage + 1) % 7;
 				self.drawFrameParts(self.debugPage);
 			}
@@ -274,6 +288,8 @@ LitroReceiver.prototype = {
 		}
 		if(match.debug != null){
 			this.debugCell = true;
+			// document.getElementById('display').addEventListener('drag', mfunc, false);
+			// scr.addEventListener('drag', mfunc, false);
 			scr.addEventListener('mousemove', mfunc, false);
 			scr.addEventListener('touchmove', mfunc, false);
 			switch(match.debug[1] | 0){
@@ -282,6 +298,9 @@ LitroReceiver.prototype = {
 				scr.addEventListener('touchend', debugPartsFunc, false);
 				break;
 			}
+			scr.ondrag = function(){
+				alert(11);
+			};
 			
 		}
 		return;
@@ -573,17 +592,17 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
+			, rect = this.rects.open
 		;
 		this.clearTappableItem();
-		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
+		this.appendTappableItem(rect, function(){
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
-			// self.drawFrameParts(1);
 
 			self.startAnimation('f_open', function(cnt, k)
 				{
 					var c = cnt
-					, aFrame = {	0: 0, 4: 1, 8: 2, 12: 3, 16: 5, 20: 4, 24: 5, 32: 6} 
+					, aFrame = {	0: 1, 4: 2, 8: 3, 12: 4, 16: 6, 20: 5, 24: 6, 32: 7} 
 					if(aFrame[c] == null){return false;}
 					self.drawFrameParts(aFrame[c]);
 			
@@ -595,18 +614,29 @@ LitroReceiver.prototype = {
 				function(){
 					self.drawVolumeSprite();
 					self.isOpen = true;
+					self.initCloseTappables();
+					self.initPlayTappables();
+					self.initTapShare();
+					self.initTapReturn();
+					self.initPlayFlickables();
 				}
 			);
 
 			self.clearTappableItem();
-			self.initCloseTappables();
-			self.initPlayTappables();
-			self.initTapShare();
-			self.initTapReturn();
-			self.initPlayFlickables();
+			self.clearTapStartItem();
+			self.clearFlickableItem();
 			
 			return false;
-		}, 'play');
+		}, null, 'open');
+		
+		this.appendTapStartItem(rect, function(){
+			self.drawFrameParts(0);
+			
+		}, null, 'open');
+		this.appendFlickableItem(rect, null, function(){
+			self.drawFrameParts(1);
+		}, 'open');
+
 	},
 	
 	initCloseTappables: function()
@@ -615,9 +645,10 @@ LitroReceiver.prototype = {
 			, bg2 = scrollByName('bg2')
 			, bg1 = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
+			rect = this.rects.close
 		;
 		// this.clearTappableItem();
-		this.appendTappableItem(makeRect(c(4), c(1), c(2), c(1)), function(){
+		this.appendTappableItem(rect, function(){
 			self.player.stop();
 			self.player.finishChannelEnvelope();
 			self.litroSound.connectOff();
@@ -626,7 +657,6 @@ LitroReceiver.prototype = {
 			self.clearFlickableItem();
 			// self.clearTapEndItem();
 			// self.drawFrameParts(0);
-			self.initOpenTappables();
 			bg2.clear();
 			self.isOpen = false;
 			// bg2.clear();
@@ -634,7 +664,7 @@ LitroReceiver.prototype = {
 			self.startAnimation('f_close', function(cnt, k)
 				{
 					var c = cnt
-					, aFrame = {	0: 5, 4: 4, 8: 3, 12: 2, 16: 0} 
+					, aFrame = {	0: 6, 4: 5, 8: 4, 12: 3, 16: 1} 
 					if(aFrame[c] == null){return false;}
 					self.drawFrameParts(aFrame[c]);
 			
@@ -644,10 +674,12 @@ LitroReceiver.prototype = {
 					return false;
 				}, 
 				function(){
+					// self.initOpenFlickables();
+					self.initOpenTappables();
 				}
 			);
 			return false;
-		}, 'play');
+		},null,  'play');
 	},	
 	
 	initPlayTappables: function()
@@ -655,11 +687,10 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
-			, rect = makeRect(c(6), c(7), c(2), c(2))
-			, pos = {x: c(6), y: c(7)}
+			, pos = {x: this.rects.play.x, y: this.rects.play.y}
 			, cw = COLOR_DISP_B , cb = COLOR_BLACK
 		;
-		this.appendTappableItem(rect, function(){
+		this.appendTappableItem(this.rects.play, function(){
 			if(self.player.isPlay()){
 				self.player.stop();
 				fs.playButton = setSwapColorSprite(fs.playButton);
@@ -671,18 +702,23 @@ LitroReceiver.prototype = {
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
 			}
 			return false;
-		}, 'play');
-		this.appendTapStartItem(rect, function(){
+		}, null, 'play');
+		this.appendTapStartItem(this.rects.play, function(){
 			if(self.player.isPlay()){
+				self.drawFrameParts(-1);
 				fs.stopButton = setSwapColorSprite(fs.stopButton, cb, cw, true);
 				fs.stopButton = setSwapColorSprite(fs.stopButton, cw, cb);
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
 			}else{
+				self.drawFrameParts(-1);
 				fs.playButton = setSwapColorSprite(fs.playButton, cw, cb, true);
 				fs.playButton = setSwapColorSprite(fs.playButton, cb, cw);
 				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}
 			return false;
+		}, null, 'play');
+		this.appendFlickableItem(this.rects.play, null, function(){
+			self.drawFrameParts(7);
 		}, 'play');
 	},
 	
@@ -691,22 +727,27 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
-			, rect = makeRect(c(4), c(7), c(2), c(2))
-			, pos = {x: c(4), y: c(7)}
+			, rect = this.rects['return']
 			, cw = COLOR_DISP_B , cb = COLOR_BLACK
 		;
-		this.appendTappableItem(makeRect(c(4), c(7), c(2), c(2)), function(){
+		this.appendTappableItem(rect, function(){
+			self.titleSlideCount = 0;
+			self.drawFrameParts(-1);
 			self.player.seekMoveBack(-1);
 			setSwapColorSprite(fs.returnButton);
-			bg.drawSpriteChunk(fs.returnButton, pos.x, pos.y);
+			bg.drawSpriteChunk(fs.returnButton, rect.x, rect.y);
 			return false;
-		}, 'play');
+		}, null, 'return');
 		this.appendTapStartItem(rect, function(){
+			self.drawFrameParts(-1);
 			setSwapColorSprite(fs.returnButton, cw, cb, true);
 			setSwapColorSprite(fs.returnButton, cb, cw);
-			bg.drawSpriteChunk(fs.returnButton, pos.x, pos.y);
+			bg.drawSpriteChunk(fs.returnButton, rect.x, rect.y);
 			return false;
-		}, 'play');
+		}, null, 'return');
+		this.appendFlickableItem(rect, null, function(){
+			self.drawFrameParts(7);
+		}, 'return');
 	},
 	
 	initTapShare: function()
@@ -714,22 +755,26 @@ LitroReceiver.prototype = {
 		var c = cellhto
 			, bg = scrollByName('bg1')
 			, self = this, fs = this.frameSprites
-			, pos = {x: c(2), y: c(7)}
-			, rect = makeRect(pos.x, pos.y, c(2), c(2))
+			, rect = this.rects.share
 			, cw = COLOR_DISP_B , cb = COLOR_BLACK
 		;
 		this.appendTappableItem(rect, function(){
+			self.drawFrameParts(-1);
 			self.openShareWindow('TWITTER', self.player);
 			setSwapColorSprite(fs.shareButton);
-			bg.drawSpriteChunk(fs.shareButton, pos.x, pos.y);
+			bg.drawSpriteChunk(fs.shareButton, rect.x, rect.y);
 			return false;
-		}, 'play');
+		}, null, 'share');
 		this.appendTapStartItem(rect, function(){
+			self.drawFrameParts(-1);
 			setSwapColorSprite(fs.shareButton, cw, cb, true);
 			setSwapColorSprite(fs.shareButton, cb, cw);
-			bg.drawSpriteChunk(fs.shareButton, pos.x, pos.y);
+			bg.drawSpriteChunk(fs.shareButton, rect.x, rect.y);
 			return false;
-		}, 'play');
+		}, null, 'share');
+		this.appendFlickableItem(rect, null, function(){
+			self.drawFrameParts(7);
+		}, 'share');
 	},
 	
 	initTappables: function()
@@ -764,13 +809,15 @@ LitroReceiver.prototype = {
 			, self = this
 			, fs = this.frameSprites
 			, scr = document.getElementById('screen')
+			, apf = function(r, x, y){self.appendFlickableItem(r, x, y);}
 			;
-		this.clearFlickableItem();
-		this.appendFlickableItem(makeRect(c(2), c(6), c(6), c(1)), function(item, x, y){
+		// this.clearFlickableItem();
+		apf(this.rects.volume, function(item, x, y){
 			self.flickVolume(x, y);
-			//self.drawVolumeSprite(); //ここで描画してはいけない
-		}, 'volume');
+		}, null, 'volume');
+
 	},
+	
 	initFlickables: function()
 	{
 		var self = this
@@ -784,6 +831,7 @@ LitroReceiver.prototype = {
 			;
 		
 		scr.addEventListener('mousemove', mvfunc, false);
+		// scr.addEventListener('drag', mvfunc, false);
 		scr.addEventListener('touchmove', mvfunc, false);
 	},
 
@@ -1040,9 +1088,13 @@ LitroReceiver.prototype = {
 		return items;
 	},
 	
-	appendTapStartItem: function(rect, func, name)
+	makeTapEvent: function(rect, func, cancel, name){
+		return {rect: rect, func: func, cancel: cancel == null ? null : cancel, name: name, pos:{x:-1, y:-1}};
+	},
+	
+	appendTapStartItem: function(rect, func, cancel, name)
 	{
-		this.tapStartItems.push({rect: rect, func: func, name: (name == null ? this.tappableItems.lengh : name)});
+		this.tapStartItems.push(this.makeTapEvent(rect,func, cancel == null ? null : cancel, name == null ? this.tapStartItems.lengh : name));
 		return this.tapStartItems.length;
 	},
 	
@@ -1051,9 +1103,9 @@ LitroReceiver.prototype = {
 		return this.tapStartItems.length;
 	},	
 	
-	appendTappableItem: function(rect, func, name)
+	appendTappableItem: function(rect, func, cancel, name)
 	{
-		this.tappableItems.push({rect: rect, func: func, name: (name == null ? this.tappableItems.lengh : name)});
+		this.tappableItems.push(this.makeTapEvent(rect,func, cancel == null ? null : cancel, name == null ? this.tappableItems.lengh : name));
 		return this.tappableItems.length;
 	},
 	
@@ -1062,9 +1114,9 @@ LitroReceiver.prototype = {
 		return this.tappableItems.length;
 	},
 	
-	appendFlickableItem: function(rect, func, name)
+	appendFlickableItem: function(rect, func, cancel, name)
 	{
-		this.flickableItems.push({rect: rect, func: func, name: (name == null ? this.tappableItems.lengh : name)});
+		this.flickableItems.push(this.makeTapEvent(rect,func, cancel == null ? null : cancel, name == null ? this.flickableItems.lengh : name));
 		return this.flickableItems.length;
 	},	
 	
@@ -1172,16 +1224,24 @@ LitroReceiver.prototype = {
 	
 	touchMoveEvent: function(x, y)
 	{
-		var i, item, mpos = this.tapMovePos, tpos = this.tapStartPos;
+		var i, item, mpos = this.tapMovePos, tpos = this.tapStartPos, isContain;
 		for(i = 0; i < this.flickableItems.length; i++){
 			item = this.flickableItems[i];
-			if(item.rect.isContain(x, y) && item.rect.isContain(tpos.x, tpos.y)){
-				if(item.func(item, x, y) == false){
-					break;
-				};
+			isContain = item.rect.isContain(x, y);
+			item.pos.x = x;
+			item.pos.y = y;
+			if(item.rect.isContain(tpos.x, tpos.y)){
+				if(isContain){
+					if(item.func != null && item.func(item, x, y) == false){
+						break;
+					};
+				}else{
+					if(item.cancel != null && item.cancel(item, x, y) == false){
+						break;
+					};
+				}
 			}
 		}
-		
 		this.tapMovePos.x = x;
 		this.tapMovePos.y = y;
 		
@@ -1200,7 +1260,7 @@ LitroReceiver.prototype = {
 	
 	},
 	
-	drawFrameParts: function(num)
+	drawFrameParts: function(num, force)
 	{
 		var f = this.frameSprites
 			, spr = this.sprites
@@ -1209,11 +1269,31 @@ LitroReceiver.prototype = {
 			, drawc = function(s, x, y){scr.drawSpriteChunk(s, x, y);}
 			, draws = function(s, x, y){scr.drawSprite(s, x, y);}
 			, pos = this.frameOpenBgPos
-
+			, clf = function(){scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT));}
 		;
-		scr.clear(COLOR_BLACK, makeRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT));
+		force = force == null ? false : force;
+		if(!force && this.prevDrawFramePartsNum == num){
+			return;
+		}
+		this.prevDrawFramePartsNum = num;
 		switch(num){
 			case 0: 
+			clf();
+			drawc(f.closeFrame_1, cto(1), cto(6));
+			drawc(f.closeShine_1, cto(1), cto(6));
+			drawc(f.zenmai_1, cto(9), cto(8));
+			drawc(f.zenmai_con_1, cto(8), cto(8));
+			drawc(f.power_on, cto(4), cto(7));
+			drawc(f.litoni_wing_1, cto(3), cto(5) - 2);
+			drawc(f.litoni_close_b, cto(3.5), cto(3) + 2);
+			drawc(f.litoni_hand_1, cto(3.5), cto(6));
+			draws(spr.pwLamp1, cto(2), cto(8) + 1);
+			pos.x = 0;
+			pos.y = 0;
+			break;
+			
+			case 1: 
+			clf();
 			drawc(f.closeFrame_1, cto(1), cto(6));
 			drawc(f.closeShine_1, cto(1), cto(6));
 			drawc(f.zenmai_1, cto(9), cto(8));
@@ -1227,8 +1307,8 @@ LitroReceiver.prototype = {
 			pos.y = 0;
 			break;
 			
-			case 1: 
-			// scrollByName('bg1').clear(null, makeRect(cto(0), cto(9), cto(9), cto(1)));
+			case 2: 
+			clf();
 			drawc(f.closeFrame_2, cto(1), cto(6));
 			drawc(f.closeShine_2, cto(1), cto(6));
 			drawc(f.zenmai_1, cto(9), cto(8));
@@ -1242,7 +1322,8 @@ LitroReceiver.prototype = {
 			pos.y = -1;
 			break;
 			
-			case 2: 
+			case 3: 
+			clf();
 			drawc(f.closeFrame_3, cto(1), cto(6));
 			drawc(f.closeShine_3, cto(1), cto(6));
 			drawc(f.zenmai_1, cto(9), cto(8));
@@ -1256,7 +1337,8 @@ LitroReceiver.prototype = {
 			pos.y = -2;
 			break;
 			
-			case 3: 
+			case 4: 
+			clf();
 			drawc(f.openFrame_1, cto(1), cto(3) );
 			drawc(f.openShaft_1, cto(1), cto(5));
 			drawc(f.power_on_top_1, cto(4), cto(3));
@@ -1267,7 +1349,8 @@ LitroReceiver.prototype = {
 			pos.y = 1;
 			break;
 			
-			case 4: 
+			case 5: 
+			clf();
 			drawc(f.openFrame_2, cto(1), cto(1) );
 			drawc(f.openShaft_2, cto(1), cto(4));
 			drawc(f.power_on_top_2, cto(4), cto(1));
@@ -1278,7 +1361,8 @@ LitroReceiver.prototype = {
 			pos.y = 0;
 			break;
 			
-			case 5:
+			case 6:
+			clf();
 			drawc(f.openFrame_3, cto(1), cto(1));
 			drawc(f.openShaft_3, cto(1), cto(4));
 			drawc(f.power_on_top_3, cto(4), cto(1));
@@ -1295,7 +1379,8 @@ LitroReceiver.prototype = {
 // 			
 			break;
 			
-			case 6:
+			case 7:
+			clf();
 			drawc(f.openFrame_3, cto(1), cto(1));
 			drawc(f.openShaft_3, cto(1), cto(4));
 			drawc(f.power_on_top_3, cto(4), cto(1));
@@ -1308,8 +1393,9 @@ LitroReceiver.prototype = {
 			scrollByName('bg1').clear(null, makeRect(cellhto(this.titleCmargin.x), cellhto(this.titleCmargin.y), cellhto(this.titleCellWidth), cellhto(this.titleCellHeight)));
 			pos.x = 0;
 			pos.y =0;
+			break;
 			
-			
+
 		}
 
 	},
@@ -1378,33 +1464,11 @@ LitroReceiver.prototype = {
 		scrollByName('bg2').rasterto(view, 0, 0, null, null, cellhto(x1), cellhto(y1));
 		scrollByName('bg2').rasterto(view, 0, 0, null, null, cellhto(x2), cellhto(y2));
 		scrollByName('bg1').rasterto(view, 0, 0, null, null, 0, 0);
-		// scrollByName('bg2').rasterto(view, 0, 0, null, null, 0,0);
-		// scrollByName('bg2').rasterto(view, 0, 0, null, null, 0,0);
-		++this.titleSlideCount;
-		// if(this.titleSlideCount % 100 == 1){console.log(this.word8.spriteArray)};
+		if(this.player.isPlay()){
+			++this.titleSlideCount;
+		}
 		// printDebug('y1: ' + y1 + ' y2: ' + y2 );
 
-	},
-	
-	//未使用
-	drawTitle: function()
-	{
-		return;
-		var bg = scrollByName('bg1')
-			, sub = this.titleSlideString
-			, slen = 6
-			, rightSublen = 0
-			, leftSublen = 0
-			, titlePos = ((this.titleSlideCount * this.titleSlideRate) % (sub.length - slen)) | 0
-			, x = cellhto(2), y = cellhto(4)
-		;
-		if(!this.player.isPlay()){
-			return;
-		}
-		
-		this.word8.print(sub.substr(titlePos, slen), x, y, COLOR_BLACK, COLOR_WHITE);
-		
-		++this.titleSlideCount;
 	},
 	
 	drawVolumeSprite: function(force)
@@ -1592,7 +1656,6 @@ LitroReceiver.prototype = {
 		this.drawDebugCell();
 		this.drawVolumeSprite();
 		this.drawChannelSprites();
-		this.drawTitle();
 		// console.time('rep');
 		// console.timeEnd('rep');
 
@@ -1841,12 +1904,12 @@ function drawLitroScreen()
 			// ltrc.drawBgTitle();
 
 	drawCanvasStacks(spmax);
-	if(!ltrc.player.isPlay()){
-		bg2.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg2.x, ltrc.manualScrollParams.bg2.y);
-		bg1.rasterto(view, 0, 0, null, null, ltrc.frameOpenBgPos.x, ltrc.frameOpenBgPos.y);
-	}else{
+	// if(!ltrc.player.isPlay()){
+		// bg2.rasterto(view, 0, 0, null, null, ltrc.manualScrollParams.bg2.x, ltrc.manualScrollParams.bg2.y);
+		// bg1.rasterto(view, 0, 0, null, null, ltrc.frameOpenBgPos.x, ltrc.frameOpenBgPos.y);
+	// }else{
 		ltrc.drawBgTitle();
-	}
+	// }
 
 	// printDebug(Math.round(litroSoundInstance.context.currentTime), 0);
 	// printDebug(testval);
