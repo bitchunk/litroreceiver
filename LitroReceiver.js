@@ -1,8 +1,8 @@
 /**
- * Litro Keyboard Interface
+ * Litro Receiver Interface
  * Since 2014-09-25 08:01:52
  * @author しふたろう
- * ver 0.01.00
+ * ver 0.02.00
  */
 
 var PaformTime = 0; //時間計測
@@ -109,7 +109,7 @@ function LitroReceiver() {
 	this.finalConf = ["NO", "OK"];
 	this.loginParams = {user_id: 0, sns_type: null, user_name: null};
 	if(window.location.href.indexOf('localhost') >= 0){
-		this.loginURLs = {'TWITTER' : 'http://localhost:58104/oauth/twitter/'};
+		this.loginURLs = {'TWITTER' : '//localhost:58104/oauth/twitter/'};
 	}else{
 		this.loginURLs = {'TWITTER' : 'http://bitchunk.fam.cx/litrosound/oauth/twitter/'};
 	}
@@ -1763,7 +1763,7 @@ LitroReceiver.prototype = {
 		var url = this.shareURLs[type];
 		if(type == 'TWITTER'){
 			url += [
-				'url=' + encodeURIComponent('http://' + location.host + location.pathname 
+				'url=' + encodeURIComponent('//' + location.host + location.pathname 
 				+ (file.sound_id == 0 ? '' : '?sound_id=' + file.sound_id)),
 				'text=' + encodeURIComponent(file.sound_id == 0 ? '' : ('"'+ file.title + '" play on the litroreceiver!!')),
 				'hashtags=' + encodeURIComponent('litrokeyboard,dtm'),
