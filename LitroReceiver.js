@@ -2,7 +2,7 @@
  * Litro Receiver Interface
  * Since 2014-09-25 08:01:52
  * @author しふたろう
- * ver 0.02.00
+ * ver 0.02.01
  */
 
 var PaformTime = 0; //時間計測
@@ -1763,7 +1763,7 @@ LitroReceiver.prototype = {
 		var url = this.shareURLs[type];
 		if(type == 'TWITTER'){
 			url += [
-				'url=' + encodeURIComponent('//' + location.host + location.pathname 
+				'url=' + encodeURIComponent(location.protocol + '//' + location.host + location.pathname 
 				+ (file.sound_id == 0 ? '' : '?sound_id=' + file.sound_id)),
 				'text=' + encodeURIComponent(file.sound_id == 0 ? '' : ('"'+ file.title + '" play on the litroreceiver!!')),
 				'hashtags=' + encodeURIComponent('litrokeyboard,dtm'),
