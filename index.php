@@ -29,20 +29,6 @@
 		<link rel="apple-touch-icon-precomposed" href="./img/apple-touch-icon.png">
 		
 		<link rel="stylesheet" type="text/css" href="./style.css" media="all">
-		<!-- AWS Analytics SDK -->
-		<script src="/js/aws-sdk.min.js"></script>
-		<script src="/js/aws-sdk-mobile-analytics.min.js"></script>
-		<script type="text/javascript">
-			var options = {
-				appId : '284cad9a703d47589109f9cb12038e22', //Amazon Mobile Analytics App ID
-				appTitle : APP_TITLE, //Optional e.g. 'Example App'
-				appVersionName : APP_VERSION_NAME, //Optional e.g. '1.4.1'
-				appVersionCode : APP_VERSION_CODE, //Optional e.g. '42'
-				appPackageName : APP_PACKAGE_NAME //Optional e.g. 'com.amazon.example'
-			};
-
-			var mobileAnalyticsClient = new AMA.Manager(options);
-		</script>
 
 		<script src="./chunklekit/string.js"></script>
 		<script src="./chunklekit/prop.js"></script>
@@ -51,6 +37,21 @@
 		<script src="./chunklekit/wordPrint.js"></script>
 		<script src="./litrosound/Litrosound.js"></script>
 		<script src="./LitroReceiver.js"></script>
+
+		<!-- AWS Analytics SDK -->
+		<script src="/libjs/aws-sdk.min.js"></script>
+		<script src="/libjs/aws-sdk-mobile-analytics.min.js"></script>
+		<script type="text/javascript">
+			var options = {
+				appId : '284cad9a703d47589109f9cb12038e22', //Amazon Mobile Analytics App ID
+				appTitle : LITRORECEIVER_NAME, //Optional e.g. 'Example App'
+				// appVersionName : APP_VERSION_NAME, //Optional e.g. '1.4.1'
+				appVersionCode : LITRORECEIVER_VERSION, //Optional e.g. '42'
+				// appPackageName : APP_PACKAGE_NAME //Optional e.g. 'com.amazon.example'
+			};
+
+			var mobileAnalyticsClient = new AMA.Manager(options);
+		</script>
 		<style>
 			
 		</style>

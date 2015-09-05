@@ -4,6 +4,8 @@
  * @author しふたろう
  * ver 0.02.01
  */
+var LITRORECEIVER_VERSION = '0.02.01';
+var LITRORECEIVER_NAME = 'LitroReceiver';
 
 var PaformTime = 0; //時間計測
 var litroReceiverInstance = null;
