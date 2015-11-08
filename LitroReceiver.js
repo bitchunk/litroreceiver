@@ -695,13 +695,14 @@ LitroReceiver.prototype = {
 		this.appendTappableItem(this.rects.play, function(){
 			if(self.player.isPlay()){
 				self.player.stop();
-				fs.playButton = setSwapColorSprite(fs.playButton);
-				bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
 			}else{
 				self.player.play();
 				fs.stopButton = setSwapColorSprite(fs.stopButton);
 				self.setTitle(self.player.title, self.player.fileUserName);
 				bg.drawSpriteChunk(fs.stopButton, pos.x, pos.y);
+				self.player.setOnStopFunc(function(){
+					self.stopPlayer();
+				});
 			}
 			return false;
 		}, null, 'play');
@@ -864,6 +865,19 @@ LitroReceiver.prototype = {
 		this.selectNote = {time: -1, ch: -1, type:'note'};
 		this.selectNoteHistory = [];
 		this.selectNoteHistory.push({time: -1, ch: -1, type:'note'});
+	},
+	
+	stopPlayer: function()
+	{
+		var  bg = scrollByName('bg1')
+			, fs = this.frameSprites
+			, pos = {x: this.rects.play.x, y: this.rects.play.y}
+			, cw = COLOR_DISP_B , cb = COLOR_BLACK
+		;
+		this.player.seekMoveBack(-1);
+		fs.playButton = setSwapColorSprite(fs.playButton);
+		bg.drawSpriteChunk(fs.playButton, pos.x, pos.y);
+		
 	},
 	
 	//未使用
