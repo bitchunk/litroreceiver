@@ -118,7 +118,7 @@ function LitroReceiver() {
 	this.shareURLs = {'TWITTER': 'https://twitter.com/intent/tweet?'};
 	
 	
-	this.arrowHosts = ['bitchunk.fam.cx', 'litrosound.bitchunk.com', 'localhost'];
+	this.allowHosts = ['bitchunk.fam.cx', 'litrosound.bitchunk.com', 'localhost'];
 	this.snsIconId = {twitter : 0, 'google+': 1};
 	this.packedFiles = [];
 	
@@ -1057,7 +1057,7 @@ LitroReceiver.prototype = {
 			if(event.data.match(/\{\S*\}/) == null){return;} //twitterのトラップ
 			if(event.data == null || event.data == 'null'){self.setError('server error'); window.removeEventListener('message'); return;}
 			var data, hostMatch = event.origin.match(/https?\:\/\/([^\s:\/]*):?/);
-			if(hostMatch == null || self.arrowHosts.indexOf(hostMatch[1]) < 0){self.setError('server error'); window.removeEventListener('message'); return;}
+			if(hostMatch == null || self.allowHosts.indexOf(hostMatch[1]) < 0){self.setError('server error'); window.removeEventListener('message'); return;}
 			data = JSON.parse(event.data);
 			if(data.error_code != null){
 				self.setError(data.message);
