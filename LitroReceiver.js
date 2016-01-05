@@ -1029,8 +1029,8 @@ LitroReceiver.prototype = {
 		sendToAPIServer('POST', 'login', {session: 1}, function(data){
 			if(data == null){return;}
 			if(data.error_code != null){
-				console.error(data.error_code + ": " + data.message);
-				self.changeEditMode('error');
+				console.info(data.error_code + ": " + data.message);
+				// self.changeEditMode('error');
 				return;
 			}
 			// self.drawMenu();
@@ -1042,7 +1042,7 @@ LitroReceiver.prototype = {
 			if(data.error_code != null){
 				console.error(data.error_code + ": " + data.message);
 			}
-			self.changeEditMode('error');
+			// self.changeEditMode('error');
 			self.drawMenu();
 		});
 		
