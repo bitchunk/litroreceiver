@@ -2,11 +2,9 @@
 <html lang="ja">
 	<head>
 		<meta charset="utf-8">
+		<meta name="author" content="bitchunk">
+		<meta name="description" content="LitroSoundによるチップチューンサウンドプレイヤー" />
 		<meta name="viewport" content="width=320, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
-		<title>8-bit style Ciptune Player | LitroReceiver</title>
-		<meta name="description" content="キーボードで演奏しながら作曲できるWebアプリ　作曲したデータをSNS、HPに貼り付けて共有できる" />
-		<meta name="keywords" content="ブラウザチップチューン,WebDTM,WebAudioAPI,8bit,PSG,フリー鍵盤演奏ソフト,ケモノ,ドラゴン" />
-		<meta name="author" content="しふたろう">
 
 		<!-- SNS OG params -->
 		<meta property="og:title" content="LitroReceiver">
@@ -22,14 +20,15 @@
 		<meta name="twitter:player" content="<?php echo CARD_URL; ?>">
 		<meta name="twitter:player:width" content="320">
 		<meta name="twitter:player:height" content="320">
-
 		
 		<!-- Replace favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
-		<title>LitroReceiver</title>
 		<link rel="shortcut icon" href="./img/favicon.png">
 		<link rel="apple-touch-icon-precomposed" href="./img/apple-touch-icon.png">
 		
+		<!-- styleseet -->
 		<link rel="stylesheet" type="text/css" href="./style.css" media="all">
+		
+		<title>LitroReceiver</title>
 
 		<script src="./chunklekit/util.js"></script>
 		<script src="./chunklekit/prop.js"></script>

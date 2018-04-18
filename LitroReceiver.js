@@ -217,7 +217,9 @@ LitroReceiver.prototype = {
 		, codeNameCount = 0
 		, repkeys_ff = this.KEY_REPLACE_FIREFOX;
 		
-		this.keyControll.initDefaultKey('right');
+//		this.keyControll.initDefaultKey('right');
+		this.keyControll.setKey('select', 9);
+		this.keyControll.setKey('ext', 16);
 		
 		
 		//キーボード設定
@@ -629,6 +631,7 @@ LitroReceiver.prototype = {
 		;
 		this.clearTappableItem();
 		this.appendTappableItem(rect, function(){
+			self.litroSound.createContext();
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
 
@@ -1284,6 +1287,18 @@ LitroReceiver.prototype = {
 		
 	},
 	
+	keycheck: function(){
+		var cont = this.keyControll
+			, ext_s = cont.getState('ext')
+			, getTrig = function(t){return cont.getTrig(t);}
+		;
+		if(getTrig('select') && ext_s){
+			captureScreen('view');
+			return;
+		}
+		
+	},
+	
 	//未使用
 	openFrame: function()
 	{
@@ -1686,7 +1701,17 @@ LitroReceiver.prototype = {
 		switch(this.playMode){
 			default: break;
 		}
-		
+		this.word4.setScroll(scrollByName('sprite'));
+		this.word8.setScroll(scrollByName('sprite'));
+		this.word4.setLineCols(0);
+		this.word8.setLineCols(0);
+//		this.word8.print('シュトクチュウ・・・', 0, 0);
+//		this.word4.print('shiftal_on', 24, 0);
+//		this.word4.print('タイトル:title:TITLE:タイトル', 0, 16);
+		if((!this.isOpen && (this.isAnimTransition.f_open == null || this.isAnimTransition.f_open == false) && (this.isAnimTransition.f_close == false || this.isAnimTransition.f_close == null))
+		){
+			this.word4.print(formatNum(this.player.sound_id, 10), 28, 69);
+		}
 		this.animTransition();
 		this.drawDebugCell();
 		this.drawVolumeSprite();
@@ -1967,6 +1992,7 @@ function litroReceiverMain()
 	// ltrc.test();
 	// console.time("key");
 	// console.timeEnd("key");
+	ltrc.keycheck();
 	ltrc.playLitro();
 	drawLitroScreen();
 };
