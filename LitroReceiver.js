@@ -4,7 +4,7 @@
  * @author しふたろう
  * ver 0.02.03
  */
-var LITRORECEIVER_VERSION = '0.02.02';
+var LITRORECEIVER_VERSION = '0.02.03';
 var LITRORECEIVER_NAME = 'LitroReceiver';
 
 var PaformTime = 0; //時間計測
@@ -631,7 +631,7 @@ LitroReceiver.prototype = {
 		;
 		this.clearTappableItem();
 		this.appendTappableItem(rect, function(){
-			self.litroSound.createContext();
+			self.litroSound.context.resume();
 			self.litroSound.connectOff();
 			self.litroSound.connectOn();
 
