@@ -2,7 +2,7 @@
  * Litro Receiver Interface
  * Since 2014-09-25 08:01:52
  * @author しふたろう
- * ver 0.02.02
+ * ver 0.02.03
  */
 var LITRORECEIVER_VERSION = '0.02.02';
 var LITRORECEIVER_NAME = 'LitroReceiver';
