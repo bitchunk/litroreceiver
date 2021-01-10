@@ -1,6 +1,6 @@
 IndexIgnore *
-Options -Indexes +FollowSymLinks
-AddHandler cgi-script htaccess 
+Options -Indexes
+AddHandler cgi-script htaccess
 
 <Files ~ "\.(html|php|js|png|css)$">
 Header add Pragma "no-cache"
